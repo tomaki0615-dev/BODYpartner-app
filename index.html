@@ -19,36 +19,23 @@ header{
   text-align:center;
 }
 
-/* =========================
-   🔷 四角連結タブ（ここ変更）
-========================= */
+/* タブ */
 .tab{
   display:flex;
   border-bottom:1px solid #ccc;
-  background:#ddd;
 }
-
 .tab button{
   flex:1;
-  padding:12px 10px;
+  padding:12px;
   border:none;
   background:#ddd;
-  color:#333;
-  font-weight:bold;
-  border-right:1px solid #bbb;
 }
-
-.tab button:last-child{
-  border-right:none;
-}
-
 .tab button.active{
   background:#fff;
-  color:#222;
   border-bottom:2px solid #222;
 }
 
-/* コンテンツ */
+/* コンテナ */
 .container{padding:10px;}
 
 .card{
@@ -78,11 +65,7 @@ header{
   background:#eee;
   cursor:pointer;
 }
-
-.tag-select.active{
-  background:#222;
-  color:#fff;
-}
+.tag-select.active{background:#222;color:#fff;}
 
 /* ボタン */
 button{
@@ -103,6 +86,34 @@ button{
   border-radius:10px;
 }
 
+/* サムネ */
+.thumb{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  border-radius:8px;
+  margin-top:5px;
+}
+
+/* ギャラリー */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.92);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:999;
+  color:#fff;
+}
+
+#mainImg{
+  width:90vw;
+  max-width:600px;
+  border-radius:10px;
+}
+
 /* トースト */
 .toast{
   position:fixed;
@@ -117,19 +128,17 @@ button{
   transition:.3s;
 }
 .toast.show{opacity:1;}
-
 </style>
 </head>
 
 <body>
 
-<header>筋トレ・ストレッチ管理</header>
+<header>筋トレ管理</header>
 
-<!-- 🔷タブ -->
 <div class="tab">
   <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
   <button id="tabAdd" onclick="switchTab('add')">追加</button>
-  <button id="tabTag" onclick="switchTab('tag')">タグ管理</button>
+  <button id="tabTag" onclick="switchTab('tag')">タグ</button>
 </div>
 
 <div class="container">
@@ -145,8 +154,7 @@ button{
   <input id="name" placeholder="名前"><br><br>
 
   <div id="addTags"></div>
-
-  <div><b>選択中：</b><div id="selectedAddTags"></div></div>
+  <div id="selectedAddTags"></div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
   <input type="file" id="imageInput" multiple><br><br>
@@ -154,10 +162,8 @@ button{
   <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ管理 -->
+<!-- タグ -->
 <div id="tagTab" style="display:none">
-  <h3>タグ管理</h3>
-
   <select id="newTagCat">
     <option value="type">type</option>
     <option value="time">time</option>
@@ -165,7 +171,7 @@ button{
     <option value="body">body</option>
   </select>
 
-  <input id="newTagName" placeholder="タグ名">
+  <input id="newTagName">
   <button onclick="addTag()">追加</button>
 
   <hr>
@@ -174,26 +180,23 @@ button{
 
 </div>
 
+<!-- ギャラリー -->
+<div class="modal" id="modal">
+  <img id="mainImg">
+  <div>
+    <button onclick="prev()">◀</button>
+    <button onclick="next()">▶</button>
+    <button onclick="closeModal()">閉じる</button>
+  </div>
+</div>
+
 <div id="toast" class="toast">完了</div>
 
 <script>
 
-////////////////////////
-// DOM
-////////////////////////
-const list=document.getElementById("list");
-const filterTags=document.getElementById("filterTags");
-const addTags=document.getElementById("addTags");
-const tagList=document.getElementById("tagList");
-const selectedAddTags=document.getElementById("selectedAddTags");
-
-const listTab=document.getElementById("listTab");
-const addTab=document.getElementById("addTab");
-const tagTab=document.getElementById("tagTab");
-
-////////////////////////
+////////////////////
 // データ
-////////////////////////
+////////////////////
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
 let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
@@ -211,9 +214,9 @@ function save(){
   localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-////////////////////////
-// タブ切替
-////////////////////////
+////////////////////
+// タブ
+////////////////////
 function switchTab(tab){
 
   listTab.style.display=tab==="list"?"block":"none";
@@ -225,13 +228,13 @@ function switchTab(tab){
   tabTag.classList.toggle("active",tab==="tag");
 
   renderTags();
-  renderTagManager();
   render();
+  renderTagManager();
 }
 
-////////////////////////
-// タグ描画
-////////////////////////
+////////////////////
+// タグ
+////////////////////
 function renderTags(){
 
   let html="";
@@ -259,9 +262,7 @@ function renderTags(){
   addTags.innerHTML=addHtml;
 
   selectedAddTags.innerHTML=
-    addSelectedTags.length
-      ? addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("")
-      : "なし";
+    addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("");
 }
 
 function toggleTag(tag){
@@ -281,18 +282,17 @@ function toggleAddTag(tag){
   renderTags();
 }
 
-////////////////////////
+////////////////////
 // 追加
-////////////////////////
+////////////////////
 function addItem(){
 
-  let name=document.getElementById("name").value.trim();
-  if(!name) return;
-
+  let name=name.value;
   let memo=document.getElementById("memo").value;
-  let files=document.getElementById("imageInput").files;
 
+  let files=imageInput.files;
   let ps=[];
+
   for(let f of files){
     ps.push(new Promise(r=>{
       let fr=new FileReader();
@@ -314,106 +314,153 @@ function addItem(){
 
     save();
 
-    document.getElementById("name").value="";
-    document.getElementById("memo").value="";
-    document.getElementById("imageInput").value="";
+    name.value="";
+    memo.value="";
+    imageInput.value="";
     addSelectedTags=[];
 
+    toast("追加しました");
     renderTags();
     render();
-
-    toast("追加しました");
     switchTab("list");
   });
 }
 
-////////////////////////
-// タグ管理
-////////////////////////
-function addTag(){
-  let cat=newTagCat.value;
-  let name=newTagName.value.trim();
-  if(!name) return;
+////////////////////
+// ギャラリー
+////////////////////
+let current=[],index=0;
 
-  if(!tagCategories[cat].includes(name)){
-    tagCategories[cat].push(name);
-  }
-
-  save();
-  newTagName.value="";
-  renderTags();
-  renderTagManager();
+function openGallery(item,i=0){
+  current=item.images;
+  index=i;
+  modal.style.display="flex";
+  draw();
 }
 
-function renderTagManager(){
-  let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<h4>${cat}</h4>`;
-    tags.forEach(tag=>{
-      html+=`
-        <div>
-          ${tag}
-          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
-        </div>
-      `;
-    });
-  });
-  tagList.innerHTML=html;
+function draw(){
+  mainImg.src=current[index];
 }
 
-function deleteTag(cat,tag){
-  tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
-  save();
-  renderTags();
-  renderTagManager();
+function next(){
+  index=(index+1)%current.length;
+  draw();
 }
 
-////////////////////////
-// トースト
-////////////////////////
-function toast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),1500);
+function prev(){
+  index=(index-1+current.length)%current.length;
+  draw();
 }
 
-////////////////////////
-// フィルタ
-////////////////////////
-function match(item){
-  if(selectedTags.length===0) return true;
-  return selectedTags.some(t=>item.tags.includes(t));
+function closeModal(){
+  modal.style.display="none";
 }
 
-////////////////////////
-// 描画
-////////////////////////
+////////////////////
+// カード描画（ここが重要）
+////////////////////
 function render(){
   list.innerHTML="";
 
-  data.filter(match).forEach(item=>{
+  data.forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
 
     div.innerHTML=`
       <b>${item.name}</b><br>
+
       ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
+
       <div>${item.memo||""}</div>
+
+      <div>回数：${item.logs?.length||0}</div>
+
+      <div>
+        ${(item.images||[]).map((img,i)=>
+          `<img class="thumb" src="${img}" onclick="event.stopPropagation(); openGallery(data.find(d=>d.id==${item.id}),${i})">`
+        ).join("")}
+      </div>
+
+      <button class="big-btn"
+        onclick="event.stopPropagation(); addLog(${item.id})">
+        やった！
+      </button>
+
+      <div>
+        <button onclick="event.stopPropagation(); editItem(${item.id})">編集</button>
+        <button onclick="event.stopPropagation(); deleteItem(${item.id})">削除</button>
+      </div>
     `;
 
     list.appendChild(div);
   });
 }
 
-////////////////////////
-// 初期化
-////////////////////////
-renderTags();
-renderTagManager();
-render();
+////////////////////
+// やった
+////////////////////
+function addLog(id){
+  let item=data.find(d=>d.id==id);
+  let today=new Date().toISOString().split("T")[0];
+
+  if(item.logs.some(l=>l.date===today)) return;
+
+  item.logs.push({date:today});
+  save();
+  render();
+}
+
+////////////////////
+// 編集・削除
+////////////////////
+function editItem(id){
+  let item=data.find(d=>d.id==id);
+  item.name=prompt("名前",item.name)||item.name;
+  save();
+  render();
+}
+
+function deleteItem(id){
+  data=data.filter(d=>d.id!=id);
+  save();
+  render();
+}
+
+////////////////////
+// タグ管理
+////////////////////
+function addTag(){
+  let cat=newTagCat.value;
+  let name=newTagName.value;
+
+  if(!tagCategories[cat].includes(name)){
+    tagCategories[cat].push(name);
+  }
+
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+function renderTagManager(){
+  tagList.innerHTML=Object.entries(tagCategories).map(([c,t])=>
+    `<h4>${c}</h4>`+
+    t.map(x=>`<div>${x}</div>`).join("")
+  ).join("");
+}
+
+////////////////////
+// UI
+////////////////////
+function toast(msg){
+  toastBox.textContent=msg;
+  toastBox.classList.add("show");
+  setTimeout(()=>toastBox.classList.remove("show"),1500);
+}
 
 </script>
+
+<div id="toast" class="toast"></div>
 
 </body>
 </html>
