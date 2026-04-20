@@ -85,12 +85,35 @@ button{
   border-radius:10px;
 }
 
-.star{
-  font-size:20px;
-  cursor:pointer;
+img{
+  width:80px;
+  margin:5px;
+  border-radius:8px;
 }
 
-img{
+/* ===== モーダル ===== */
+.modal-overlay{
+  position:fixed;
+  top:0;left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.modal{
+  background:#fff;
+  width:90%;
+  max-height:80%;
+  overflow:auto;
+  border-radius:12px;
+  padding:15px;
+}
+
+.modal img{
   width:80px;
   margin:5px;
   border-radius:8px;
@@ -154,6 +177,11 @@ img{
 
 </div>
 
+<!-- モーダル -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalContent"></div>
+</div>
+
 <script>
 let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
@@ -168,6 +196,7 @@ let selectedTags = [];
 let addSelectedTags = [];
 let mode = "OR";
 
+/* DOM */
 const listTab = document.getElementById("listTab");
 const addTab = document.getElementById("addTab");
 const tagTab = document.getElementById("tagTab");
@@ -181,9 +210,7 @@ function save(){
   localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
 }
 
-/* ======================
-   タブ切り替え
-====================== */
+/* ===== タブ ===== */
 function switchTab(tab){
   listTab.style.display = tab==="list"?"block":"none";
   addTab.style.display = tab==="add"?"block":"none";
@@ -198,13 +225,10 @@ function switchTab(tab){
   render();
 }
 
-/* ======================
-   タグ管理
-====================== */
+/* ===== タグ管理 ===== */
 function addTag(){
   let cat = document.getElementById("newTagCat").value;
   let name = document.getElementById("newTagName").value.trim();
-
   if(!name) return;
 
   if(!tagCategories[cat].includes(name)){
@@ -254,9 +278,7 @@ function renderTagManager(){
   tagList.innerHTML = html;
 }
 
-/* ======================
-   タグUI
-====================== */
+/* ===== タグUI ===== */
 function renderTags(){
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
@@ -294,18 +316,12 @@ function toggleAddTag(tag){
   renderTags();
 }
 
-/* ======================
-   データ処理
-====================== */
+/* ===== データ追加 ===== */
 function addItem(){
-  let nameEl = document.getElementById("name");
-  let memoEl = document.getElementById("memo");
-  let imageEl = document.getElementById("imageInput");
-
-  let name = nameEl.value;
+  let name = document.getElementById("name").value;
   if(!name) return;
 
-  let files = imageEl.files;
+  let files = document.getElementById("imageInput").files;
   let promises = [];
 
   for(let file of files){
@@ -321,7 +337,7 @@ function addItem(){
       id:Date.now(),
       name,
       tags:addSelectedTags,
-      memo:memoEl.value,
+      memo:document.getElementById("memo").value,
       images:results,
       favorite:false,
       logs:[]
@@ -329,18 +345,16 @@ function addItem(){
 
     save();
 
-    nameEl.value="";
-    memoEl.value="";
-    imageEl.value="";
+    document.getElementById("name").value="";
+    document.getElementById("memo").value="";
+    document.getElementById("imageInput").value="";
     addSelectedTags=[];
 
     switchTab("list");
   });
 }
 
-/* ======================
-   ロジック
-====================== */
+/* ===== ロジック ===== */
 function toggleMode(){
   mode = mode==="OR"?"AND":"OR";
   document.getElementById("mode").innerText = mode;
@@ -351,8 +365,8 @@ function match(item){
   if(selectedTags.length===0) return true;
 
   return mode==="AND"
-    ? selectedTags.every(tag=>item.tags.includes(tag))
-    : selectedTags.some(tag=>item.tags.includes(tag));
+    ? selectedTags.every(t=>item.tags.includes(t))
+    : selectedTags.some(t=>item.tags.includes(t));
 }
 
 function addLog(item){
@@ -364,23 +378,50 @@ function addLog(item){
   render();
 }
 
-function toggleFav(item){
-  item.favorite = !item.favorite;
-  save();
-  render();
+/* ===== 詳細表示（重要） ===== */
+function openDetail(item){
+  let modal = document.getElementById("modalContent");
+
+  modal.innerHTML = `
+    <h2>${item.name}</h2>
+
+    <div>
+      ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+    </div>
+
+    <p>${item.memo || ""}</p>
+
+    <p>回数: ${item.logs.length}</p>
+
+    <div>
+      ${item.images.map(img=>`<img src="${img}">`).join("")}
+    </div>
+
+    <button onclick="addLog(data.find(d=>d.id==${item.id}))">
+      やった！
+    </button>
+  `;
+
+  document.getElementById("modalOverlay").style.display="flex";
 }
 
-/* ======================
-   描画
-====================== */
+function closeModal(e){
+  if(e.target.id==="modalOverlay"){
+    document.getElementById("modalOverlay").style.display="none";
+  }
+}
+
+/* ===== 描画 ===== */
 function render(){
   let filtered = data.filter(match);
-
   list.innerHTML="";
 
   filtered.forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
+
+    div.onclick = ()=>openDetail(item);
+    div.style.cursor="pointer";
 
     div.innerHTML=`
       <b>${item.name}</b><br>
@@ -397,7 +438,7 @@ function render(){
         ${item.images.map(img=>`<img src="${img}">`).join("")}
       </div>
 
-      <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
+      <button class="big-btn" onclick="event.stopPropagation();addLog(data.find(d=>d.id==${item.id}))">
         やった！
       </button>
     `;
