@@ -6,101 +6,39 @@
 <title>筋トレ管理アプリ</title>
 
 <style>
-body{
-  font-family:-apple-system;
-  margin:0;
-  background:#f5f5f5;
-}
-
-header{
-  background:#222;
-  color:#fff;
-  padding:10px;
-  text-align:center;
-}
-
+body{font-family:-apple-system;margin:0;background:#f5f5f5;}
+header{background:#222;color:#fff;padding:10px;text-align:center;}
 .tab{display:flex;}
-.tab button{
-  flex:1;
-  padding:10px;
-  border:none;
-  background:#ddd;
-}
-.tab button.active{
-  background:#222;
-  color:#fff;
-}
-
+.tab button{flex:1;padding:10px;border:none;background:#ddd;}
+.tab button.active{background:#222;color:#fff;}
 .container{padding:10px;}
 
-.card{
-  background:#fff;
-  margin-bottom:10px;
-  padding:10px;
-  border-radius:10px;
-}
+.card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
 
-.tag{
-  display:inline-block;
-  padding:4px 8px;
-  margin:2px;
-  border-radius:10px;
-  font-size:12px;
-  background:#666;
-  color:#fff;
-}
+.tag{display:inline-block;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;background:#666;color:#fff;}
 
 .tag-select{
-  display:inline-block;
-  padding:4px 8px;
-  margin:2px;
-  border-radius:10px;
-  font-size:12px;
-  background:#eee;
-  cursor:pointer;
+  display:inline-block;padding:4px 8px;margin:2px;
+  border-radius:10px;font-size:12px;background:#eee;cursor:pointer;
 }
+.tag-select.active{background:#222;color:#fff;}
 
-.tag-select.active{
-  background:#222;
-  color:#fff;
-}
-
-button{
-  padding:5px 10px;
-  margin:2px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  background:#fff;
-  font-size:12px;
-}
+button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;background:#fff;font-size:12px;}
 
 .big-btn{
-  background:#2e7d32;
-  color:#fff;
-  border:none;
-  padding:10px;
-  width:100%;
-  border-radius:10px;
+  background:#2e7d32;color:#fff;border:none;
+  padding:10px;width:100%;border-radius:10px;
 }
 
-/* 🔥追加成功メッセージ */
+/* トースト */
 .toast{
-  position:fixed;
-  bottom:20px;
-  left:50%;
+  position:fixed;bottom:20px;left:50%;
   transform:translateX(-50%);
-  background:#222;
-  color:#fff;
-  padding:10px 16px;
-  border-radius:20px;
-  opacity:0;
-  transition:.3s;
-  pointer-events:none;
+  background:#222;color:#fff;
+  padding:10px 16px;border-radius:20px;
+  opacity:0;transition:.3s;
 }
-
-.toast.show{
-  opacity:1;
-}
+.toast.show{opacity:1;}
 </style>
 </head>
 
@@ -109,9 +47,9 @@ button{
 <header>筋トレ・ストレッチ管理</header>
 
 <div class="tab">
-  <button onclick="switchTab('list')" id="tabList" class="active">検索</button>
-  <button onclick="switchTab('add')" id="tabAdd">追加</button>
-  <button onclick="switchTab('tag')" id="tabTag">タグ管理</button>
+  <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
+  <button id="tabAdd" onclick="switchTab('add')">追加</button>
+  <button id="tabTag" onclick="switchTab('tag')">タグ管理</button>
 </div>
 
 <div class="container">
@@ -128,21 +66,17 @@ button{
 
   <div id="addTags"></div>
 
-  <div style="margin:8px 0;">
-    <b>選択中：</b>
-    <div id="selectedAddTags"></div>
-  </div>
+  <div><b>選択中：</b><div id="selectedAddTags"></div></div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
+
   <input type="file" id="imageInput" multiple><br><br>
 
   <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ管理 -->
+<!-- タグ -->
 <div id="tagTab" style="display:none">
-  <h3>タグ管理</h3>
-
   <select id="newTagCat">
     <option value="type">type</option>
     <option value="time">time</option>
@@ -159,98 +93,65 @@ button{
 
 </div>
 
-<!-- トースト -->
 <div id="toast" class="toast">追加しました</div>
 
 <script>
 
-let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
+////////////////////////
+// 🔧DOM（ここが超重要）
+////////////////////////
+const listTab=document.getElementById("listTab");
+const addTab=document.getElementById("addTab");
+const tagTab=document.getElementById("tagTab");
 
-let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || JSON.stringify({
+const list=document.getElementById("list");
+const filterTags=document.getElementById("filterTags");
+const addTags=document.getElementById("addTags");
+const tagList=document.getElementById("tagList");
+const selectedAddTags=document.getElementById("selectedAddTags");
+
+////////////////////////
+// 🧠データ
+////////////////////////
+let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
+
+let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
   type:["筋トレ","ストレッチ","マッサージ"],
   time:["朝","昼","夜"],
   freq:["毎日","週3","月水金"],
   body:["上半身","下半身","体幹","顔"]
 }));
 
-let selectedTags = [];
-let addSelectedTags = [];
-
-const list = document.getElementById("list");
+let selectedTags=[];
+let addSelectedTags=[];
 
 function save(){
-  localStorage.setItem("trainingApp", JSON.stringify(data));
-  localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
+  localStorage.setItem("trainingApp",JSON.stringify(data));
+  localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
 ////////////////////////
-// 🔥トースト表示
+// 🧭タブ
 ////////////////////////
-function showToast(msg){
-  const t=document.getElementById("toast");
-  t.innerText=msg;
-  t.classList.add("show");
+function switchTab(tab){
 
-  setTimeout(()=>{
-    t.classList.remove("show");
-  },1500);
+  listTab.style.display=tab==="list"?"block":"none";
+  addTab.style.display=tab==="add"?"block":"none";
+  tagTab.style.display=tab==="tag"?"block":"none";
+
+  tabList.classList.toggle("active",tab==="list");
+  tabAdd.classList.toggle("active",tab==="add");
+  tabTag.classList.toggle("active",tab==="tag");
+
+  renderTags();
+  render();
 }
 
 ////////////////////////
-// ➕追加（完全版）
-////////////////////////
-function addItem(){
-  let name=document.getElementById("name").value.trim();
-  let memo=document.getElementById("memo").value;
-  let files=document.getElementById("imageInput").files;
-
-  if(!name){
-    alert("名前を入力してね");
-    return;
-  }
-
-  let ps=[];
-  for(let f of files){
-    ps.push(new Promise(r=>{
-      let fr=new FileReader();
-      fr.onload=()=>r(fr.result);
-      fr.readAsDataURL(f);
-    }));
-  }
-
-  Promise.all(ps).then(imgs=>{
-
-    data.push({
-      id:Date.now(),
-      name,
-      tags:addSelectedTags,
-      memo,
-      images:imgs,
-      logs:[]
-    });
-
-    save();
-
-    // 🔥入力リセット
-    document.getElementById("name").value="";
-    document.getElementById("memo").value="";
-    document.getElementById("imageInput").value="";
-    addSelectedTags=[];
-
-    renderTags();
-    render();
-
-    // 🔥成功表示
-    showToast("追加しました");
-
-    switchTab("list");
-  });
-}
-
-////////////////////////
-// 🏷タグUI
+// 🏷タグ
 ////////////////////////
 function renderTags(){
+
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html+=`<div>${cat}</div>`;
@@ -275,14 +176,14 @@ function renderTags(){
   });
   addTags.innerHTML=addHtml;
 
-  selectedAddTags.innerHTML =
+  selectedAddTags.innerHTML=
     addSelectedTags.length
       ? addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("")
       : "なし";
 }
 
 function toggleAddTag(tag){
-  addSelectedTags = addSelectedTags.includes(tag)
+  addSelectedTags=addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
     : [...addSelectedTags,tag];
 
@@ -290,7 +191,7 @@ function toggleAddTag(tag){
 }
 
 function toggleTag(tag){
-  selectedTags = selectedTags.includes(tag)
+  selectedTags=selectedTags.includes(tag)
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
 
@@ -298,7 +199,65 @@ function toggleTag(tag){
 }
 
 ////////////////////////
-// 🧾描画（最小版）
+// ➕追加（完全復旧）
+////////////////////////
+function addItem(){
+
+  let name=document.getElementById("name").value.trim();
+  if(!name) return;
+
+  let memo=document.getElementById("memo").value;
+  let files=document.getElementById("imageInput").files;
+
+  let ps=[];
+  for(let f of files){
+    ps.push(new Promise(r=>{
+      let fr=new FileReader();
+      fr.onload=()=>r(fr.result);
+      fr.readAsDataURL(f);
+    }));
+  }
+
+  Promise.all(ps).then(imgs=>{
+
+    data.push({
+      id:Date.now(),
+      name,
+      tags:addSelectedTags,
+      memo,
+      images:imgs,
+      logs:[]
+    });
+
+    save();
+
+    // 🔥クリア
+    document.getElementById("name").value="";
+    document.getElementById("memo").value="";
+    document.getElementById("imageInput").value="";
+    addSelectedTags=[];
+
+    renderTags();
+    render();
+
+    showToast("追加しました");
+
+    switchTab("list");
+  });
+}
+
+////////////////////////
+// 🔥トースト
+////////////////////////
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1500);
+}
+
+////////////////////////
+// 🧾描画
 ////////////////////////
 function render(){
   list.innerHTML="";
@@ -317,6 +276,9 @@ function render(){
   });
 }
 
+////////////////////////
+// 🚀初期化
+////////////////////////
 renderTags();
 render();
 
