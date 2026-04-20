@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>筋トレ管理アプリ</title>
+<title>筋トレ管理アプリ 完全版</title>
 
 <style>
 body{
@@ -48,14 +48,30 @@ header{
 
 .tag{
   display:inline-block;
-  padding:3px 8px;
+  padding:4px 8px;
   margin:2px;
-  background:#eee;
   border-radius:10px;
   font-size:12px;
+  color:#fff;
 }
 
-.tag.active{
+/* カテゴリ別カラー */
+.type{background:#007bff;}
+.time{background:#28a745;}
+.freq{background:#ffc107;color:#000;}
+.body{background:#e83e8c;}
+
+.tag-select{
+  display:inline-block;
+  padding:4px 8px;
+  margin:2px;
+  border-radius:10px;
+  font-size:12px;
+  background:#eee;
+  cursor:pointer;
+}
+
+.tag-select.active{
   background:#222;
   color:#fff;
 }
@@ -78,6 +94,12 @@ button{
   font-size:20px;
   cursor:pointer;
 }
+
+img{
+  width:80px;
+  margin:5px;
+  border-radius:8px;
+}
 </style>
 </head>
 
@@ -95,12 +117,9 @@ button{
 <!-- 検索 -->
 <div id="listTab">
 
-<div>
-  <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
-</div>
+<button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
 
 <div id="filterTags"></div>
-
 <div id="list"></div>
 
 </div>
@@ -112,7 +131,9 @@ button{
 
 <div id="addTags"></div>
 
-<textarea id="memo" placeholder="メモ"></textarea><br>
+<textarea id="memo" placeholder="メモ"></textarea><br><br>
+
+<input type="file" id="imageInput" multiple><br><br>
 
 <button onclick="addItem()">追加</button>
 
@@ -123,9 +144,15 @@ button{
 <script>
 let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
-let tags = ["筋トレ","ストレッチ","マッサージ","朝","夜","毎日","上半身","下半身"];
+const tagCategories = {
+  type:["筋トレ","ストレッチ","マッサージ"],
+  time:["朝","昼","夜"],
+  freq:["毎日","週3","月水金"],
+  body:["上半身","下半身","体幹","顔"]
+};
 
 let selectedTags = [];
+let addSelectedTags = [];
 let mode = "OR";
 
 function save(){
@@ -133,71 +160,88 @@ function save(){
 }
 
 function switchTab(tab){
-  document.getElementById("listTab").style.display = tab==="list"?"block":"none";
-  document.getElementById("addTab").style.display = tab==="add"?"block":"none";
-
-  document.getElementById("tabList").classList.remove("active");
-  document.getElementById("tabAdd").classList.remove("active");
-
-  if(tab==="list"){
-    document.getElementById("tabList").classList.add("active");
-  } else {
-    document.getElementById("tabAdd").classList.add("active");
-  }
+  listTab.style.display = tab==="list"?"block":"none";
+  addTab.style.display = tab==="add"?"block":"none";
+  tabList.classList.toggle("active",tab==="list");
+  tabAdd.classList.toggle("active",tab==="add");
 }
 
 function renderTags(){
   let html="";
-  tags.forEach(tag=>{
-    html+=`<span class="tag ${selectedTags.includes(tag)?"active":""}" onclick="toggleTag('${tag}')">${tag}</span>`;
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    html+=`<div>${cat}：</div>`;
+    tags.forEach(tag=>{
+      html+=`<span class="tag-select ${selectedTags.includes(tag)?"active":""}" onclick="toggleTag('${tag}')">${tag}</span>`;
+    });
   });
-  document.getElementById("filterTags").innerHTML=html;
-  document.getElementById("addTags").innerHTML=html.replace(/toggleTag/g,"toggleAddTag");
+  filterTags.innerHTML=html;
+
+  let addHtml="";
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    addHtml+=`<div>${cat}：</div>`;
+    tags.forEach(tag=>{
+      addHtml+=`<span class="tag-select ${addSelectedTags.includes(tag)?"active":""}" onclick="toggleAddTag('${tag}')">${tag}</span>`;
+    });
+  });
+  addTags.innerHTML=addHtml;
 }
 
 function toggleTag(tag){
-  if(selectedTags.includes(tag)){
-    selectedTags = selectedTags.filter(t=>t!==tag);
-  } else {
-    selectedTags.push(tag);
-  }
+  selectedTags = selectedTags.includes(tag)
+    ? selectedTags.filter(t=>t!==tag)
+    : [...selectedTags,tag];
   renderTags();
   render();
 }
 
-let addSelectedTags = [];
-
 function toggleAddTag(tag){
-  if(addSelectedTags.includes(tag)){
-    addSelectedTags = addSelectedTags.filter(t=>t!==tag);
-  } else {
-    addSelectedTags.push(tag);
-  }
+  addSelectedTags = addSelectedTags.includes(tag)
+    ? addSelectedTags.filter(t=>t!==tag)
+    : [...addSelectedTags,tag];
   renderTags();
 }
 
 function addItem(){
   let name = document.getElementById("name").value;
-
   if(!name) return;
 
-  data.push({
-    id: Date.now(),
-    name,
-    tags: addSelectedTags,
-    memo: document.getElementById("memo").value,
-    favorite:false,
-    logs:[]
+  let files = document.getElementById("imageInput").files;
+  let images=[];
+
+  let promises = [];
+
+  for(let file of files){
+    let p = new Promise(res=>{
+      let reader = new FileReader();
+      reader.onload = ()=>res(reader.result);
+      reader.readAsDataURL(file);
+    });
+    promises.push(p);
+  }
+
+  Promise.all(promises).then(results=>{
+    images = results;
+
+    data.push({
+      id:Date.now(),
+      name,
+      tags:addSelectedTags,
+      memo:document.getElementById("memo").value,
+      images,
+      favorite:false,
+      logs:[]
+    });
+
+    save();
+
+    name.value="";
+    memo.value="";
+    imageInput.value="";
+    addSelectedTags=[];
+
+    switchTab("list");
+    render();
   });
-
-  save();
-
-  document.getElementById("name").value="";
-  document.getElementById("memo").value="";
-  addSelectedTags=[];
-
-  switchTab("list");
-  render();
 }
 
 function toggleMode(){
@@ -209,11 +253,9 @@ function toggleMode(){
 function match(item){
   if(selectedTags.length===0) return true;
 
-  if(mode==="AND"){
-    return selectedTags.every(tag=>item.tags.includes(tag));
-  } else {
-    return selectedTags.some(tag=>item.tags.includes(tag));
-  }
+  return mode==="AND"
+    ? selectedTags.every(tag=>item.tags.includes(tag))
+    : selectedTags.some(tag=>item.tags.includes(tag));
 }
 
 function addLog(item){
@@ -229,17 +271,20 @@ function toggleFav(item){
   render();
 }
 
+function getTagClass(tag){
+  for(let [cat,tags] of Object.entries(tagCategories)){
+    if(tags.includes(tag)) return cat;
+  }
+  return "";
+}
+
 function render(){
-  let list = document.getElementById("list");
-
-  let filtered = data.filter(match);
-
-  filtered.sort((a,b)=>b.favorite - a.favorite);
+  let filtered = data.filter(match).sort((a,b)=>b.favorite - a.favorite);
 
   list.innerHTML="";
 
   filtered.forEach(item=>{
-    let div = document.createElement("div");
+    let div=document.createElement("div");
     div.className="card";
 
     div.innerHTML=`
@@ -251,12 +296,16 @@ function render(){
       </div>
 
       <div>
-        ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+        ${item.tags.map(t=>`<span class="tag ${getTagClass(t)}">${t}</span>`).join("")}
       </div>
 
-      <div>${item.memo || ""}</div>
+      <div>${item.memo||""}</div>
 
       <div>回数: ${item.logs.length}</div>
+
+      <div>
+        ${item.images.map(img=>`<img src="${img}">`).join("")}
+      </div>
 
       <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
         やった！
