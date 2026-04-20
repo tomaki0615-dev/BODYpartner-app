@@ -34,7 +34,7 @@ img{width:70px;margin:5px;border-radius:8px;}
 <div class="tab">
 <button onclick="switchTab('list')" id="tabList" class="active">検索</button>
 <button onclick="switchTab('add')" id="tabAdd">追加</button>
-<button onclick="switchTab('tag')">タグ管理</button>
+<button onclick="switchTab('tag')" id="tabTag">タグ管理</button>
 </div>
 
 <div class="container">
@@ -73,6 +73,14 @@ img{width:70px;margin:5px;border-radius:8px;}
 <script>
 let data = JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
+// 🔥 旧データ救済
+data = data.map(item => ({
+  images: [],
+  logs: [],
+  tags: [],
+  ...item
+}));
+
 let tagCategories = JSON.parse(localStorage.getItem("tags")) || {
   type:["筋トレ","ストレッチ"],
   time:["朝","夜"],
@@ -80,9 +88,10 @@ let tagCategories = JSON.parse(localStorage.getItem("tags")) || {
   body:["上半身","下半身"]
 };
 
-let selectedTags=[], addSelectedTags=[];
-let mode="OR";
-let sortMode="count"; // count or date
+let selectedTags = [];
+let addSelectedTags = [];
+let mode = "OR";
+let sortMode = "count";
 
 function save(){
   localStorage.setItem("trainingApp",JSON.stringify(data));
@@ -93,11 +102,20 @@ function switchTab(tab){
   listTab.style.display=tab==="list"?"block":"none";
   addTab.style.display=tab==="add"?"block":"none";
   tagTab.style.display=tab==="tag"?"block":"none";
+
+  tabList.classList.remove("active");
+  tabAdd.classList.remove("active");
+  tabTag.classList.remove("active");
+
+  if(tab==="list") tabList.classList.add("active");
+  if(tab==="add") tabAdd.classList.add("active");
+  if(tab==="tag") tabTag.classList.add("active");
 }
 
 function clearTags(){
   selectedTags=[];
-  renderTags(); render();
+  renderTags();
+  render();
 }
 
 function toggleSort(){
@@ -159,7 +177,8 @@ function toggleTag(tag){
   selectedTags = selectedTags.includes(tag)
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
-  renderTags(); render();
+  renderTags();
+  render();
 }
 
 function toggleAddTag(tag){
@@ -208,7 +227,7 @@ function toggleMode(){
 }
 
 function match(item){
-  if(!selectedTags.length)return true;
+  if(selectedTags.length===0) return true;
   return mode==="AND"
     ? selectedTags.every(t=>item.tags.includes(t))
     : selectedTags.some(t=>item.tags.includes(t));
@@ -216,22 +235,14 @@ function match(item){
 
 function addLog(item){
   item.logs.push(new Date().toISOString());
-  save(); render();
-}
-
-function deleteLog(item,i){
-  item.logs.splice(i,1);
-  save(); render();
+  save();
+  render();
 }
 
 function toggleFav(item){
   item.favorite=!item.favorite;
-  save(); render();
-}
-
-function deleteItem(id){
-  data=data.filter(d=>d.id!==id);
-  save(); render();
+  save();
+  render();
 }
 
 function getLastDate(item){
@@ -250,13 +261,15 @@ function render(){
 
   items.sort((a,b)=>{
     if(b.favorite - a.favorite !== 0) return b.favorite - a.favorite;
-
-    if(sortMode==="count"){
-      return b.logs.length - a.logs.length;
-    } else {
-      return getLastDate(b) - getLastDate(a);
-    }
+    return sortMode==="count"
+      ? b.logs.length - a.logs.length
+      : getLastDate(b) - getLastDate(a);
   });
+
+  if(items.length===0){
+    list.innerHTML="データがありません";
+    return;
+  }
 
   list.innerHTML="";
 
@@ -275,13 +288,17 @@ function render(){
       </div>
 
       <div>
-        ${item.tags.map(t=>`<span class="tag ${getTagClass(t)}">${t}</span>`).join("")}
+        ${(item.tags||[]).map(t=>`<span class="tag ${getTagClass(t)}">${t}</span>`).join("")}
       </div>
 
       <div>${item.memo||""}</div>
 
       <div class="small">
         回数: ${item.logs.length} / 最終: ${last}
+      </div>
+
+      <div>
+        ${(item.images||[]).map(img=>`<img src="${img}">`).join("")}
       </div>
 
       <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
@@ -295,7 +312,7 @@ function render(){
 
 function getTagClass(tag){
   for(let [cat,tags] of Object.entries(tagCategories)){
-    if(tags.includes(tag))return cat;
+    if(tags.includes(tag)) return cat;
   }
 }
 
