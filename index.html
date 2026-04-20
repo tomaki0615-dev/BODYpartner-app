@@ -71,14 +71,18 @@ img{width:70px;margin:5px;border-radius:8px;}
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("trainingApp")||"[]");
+let raw = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
-// 🔥 旧データ救済
-data = data.map(item => ({
-  images: [],
-  logs: [],
-  tags: [],
-  ...item
+// 🔥 完全データ補正（ここが最重要）
+let data = raw.map(item => ({
+  ...item,
+  id: item.id || Date.now() + Math.random(),
+  name: item.name || "未設定",
+  memo: item.memo || "",
+  favorite: item.favorite || false,
+  tags: Array.isArray(item.tags) ? item.tags : [],
+  images: Array.isArray(item.images) ? item.images : [],
+  logs: Array.isArray(item.logs) ? item.logs : []
 }));
 
 let tagCategories = JSON.parse(localStorage.getItem("tags")) || {
@@ -94,26 +98,18 @@ let mode = "OR";
 let sortMode = "count";
 
 function save(){
-  localStorage.setItem("trainingApp",JSON.stringify(data));
-  localStorage.setItem("tags",JSON.stringify(tagCategories));
+  localStorage.setItem("trainingApp", JSON.stringify(data));
+  localStorage.setItem("tags", JSON.stringify(tagCategories));
 }
 
 function switchTab(tab){
-  listTab.style.display=tab==="list"?"block":"none";
-  addTab.style.display=tab==="add"?"block":"none";
-  tagTab.style.display=tab==="tag"?"block":"none";
-
-  tabList.classList.remove("active");
-  tabAdd.classList.remove("active");
-  tabTag.classList.remove("active");
-
-  if(tab==="list") tabList.classList.add("active");
-  if(tab==="add") tabAdd.classList.add("active");
-  if(tab==="tag") tabTag.classList.add("active");
+  listTab.style.display = tab==="list"?"block":"none";
+  addTab.style.display = tab==="add"?"block":"none";
+  tagTab.style.display = tab==="tag"?"block":"none";
 }
 
 function clearTags(){
-  selectedTags=[];
+  selectedTags = [];
   renderTags();
   render();
 }
@@ -143,40 +139,12 @@ function renderTags(){
     });
   });
   addTags.innerHTML=addHtml;
-
-  renderTagManager();
-}
-
-function renderTagManager(){
-  let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<div><b>${cat}</b><br>`;
-    tags.forEach(tag=>{
-      html+=`${tag} <button onclick="deleteTag('${cat}','${tag}')">削除</button><br>`;
-    });
-    html+="</div>";
-  });
-  tagList.innerHTML=html;
-}
-
-function addTag(){
-  let t=newTag.value;
-  let c=tagCat.value;
-  if(!t)return;
-  tagCategories[c].push(t);
-  newTag.value="";
-  save(); renderTags();
-}
-
-function deleteTag(cat,tag){
-  tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
-  save(); renderTags();
 }
 
 function toggleTag(tag){
   selectedTags = selectedTags.includes(tag)
     ? selectedTags.filter(t=>t!==tag)
-    : [...selectedTags,tag];
+    : [...selectedTags, tag];
   renderTags();
   render();
 }
@@ -184,14 +152,14 @@ function toggleTag(tag){
 function toggleAddTag(tag){
   addSelectedTags = addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
-    : [...addSelectedTags,tag];
+    : [...addSelectedTags, tag];
   renderTags();
 }
 
 function addItem(){
-  let name=document.getElementById("name").value;
-  let memo=document.getElementById("memo").value;
-  let files=document.getElementById("imageInput").files;
+  let name = document.getElementById("name").value;
+  let memo = document.getElementById("memo").value;
+  let files = document.getElementById("imageInput").files;
   if(!name) return;
 
   let promises=[...files].map(file=>new Promise(res=>{
@@ -202,13 +170,13 @@ function addItem(){
 
   Promise.all(promises).then(images=>{
     data.push({
-      id:Date.now(),
+      id: Date.now(),
       name,
-      tags:addSelectedTags,
       memo,
+      tags: addSelectedTags,
       images,
-      favorite:false,
-      logs:[]
+      logs: [],
+      favorite:false
     });
 
     save();
@@ -221,11 +189,6 @@ function addItem(){
   });
 }
 
-function toggleMode(){
-  mode=mode==="OR"?"AND":"OR";
-  render();
-}
-
 function match(item){
   if(selectedTags.length===0) return true;
   return mode==="AND"
@@ -235,12 +198,6 @@ function match(item){
 
 function addLog(item){
   item.logs.push(new Date().toISOString());
-  save();
-  render();
-}
-
-function toggleFav(item){
-  item.favorite=!item.favorite;
   save();
   render();
 }
@@ -280,44 +237,22 @@ function render(){
     div.className="card";
 
     div.innerHTML=`
-      <div>
-        <span class="star" onclick="toggleFav(data.find(d=>d.id==${item.id}))">
-          ${item.favorite?"⭐":"☆"}
-        </span>
-        <b>${item.name}</b>
-      </div>
-
-      <div>
-        ${(item.tags||[]).map(t=>`<span class="tag ${getTagClass(t)}">${t}</span>`).join("")}
-      </div>
-
-      <div>${item.memo||""}</div>
-
-      <div class="small">
-        回数: ${item.logs.length} / 最終: ${last}
-      </div>
-
-      <div>
-        ${(item.images||[]).map(img=>`<img src="${img}">`).join("")}
-      </div>
-
-      <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
-        やった！
-      </button>
+      <b>${item.name}</b>
+      <div>${item.memo}</div>
+      <div>回数: ${item.logs.length} / 最終: ${last}</div>
+      <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">やった！</button>
     `;
 
     list.appendChild(div);
   });
 }
 
-function getTagClass(tag){
-  for(let [cat,tags] of Object.entries(tagCategories)){
-    if(tags.includes(tag)) return cat;
-  }
-}
-
-renderTags();
-render();
+// 🚀 初期表示は強制実行
+document.addEventListener("DOMContentLoaded", ()=>{
+  selectedTags = [];
+  renderTags();
+  render();
+});
 </script>
 
 </body>
