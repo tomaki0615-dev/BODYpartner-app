@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>筋トレ管理アプリ</title>
+<title>身体整えアプリ</title>
 
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
@@ -21,19 +21,28 @@ header{
 /* タブ */
 .tab{
   display:flex;
-  border-bottom:1px solid #ccc;
-}
-.tab button{
-  flex:1;
-  padding:12px;
-  border:none;
-  background:#ddd;
-}
-.tab button.active{
-  background:#fff;
-  border-bottom:2px solid #222;
+  background:#eee;
+  border-radius:12px;
+  padding:3px;
+  margin:10px;
 }
 
+.tab button{
+  flex:1;
+  padding:10px;
+  border:none;
+  background:transparent;
+  border-radius:10px;
+  font-weight:bold;
+  transition:0.2s;
+  color:#555;
+}
+
+.tab button.active{
+  background:#fff;
+  color:#000;
+  box-shadow:0 1px 3px rgba(0,0,0,0.15);
+}
 .container{padding:10px;}
 
 .card{
