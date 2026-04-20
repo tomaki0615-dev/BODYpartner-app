@@ -28,19 +28,28 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 </div>
 
 <script>
-// ---------------- データ読み込み ----------------
+// ---------------- 元データ ----------------
 let raw = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
-// 🔥 完全補正（ここ超重要）
-let data = raw.map(item => ({
-  id: item.id || Date.now() + Math.random(),
-  name: item.name || "未設定",
-  memo: item.memo || "",
-  tags: Array.isArray(item.tags) ? item.tags : [],
-  logs: Array.isArray(item.logs) ? item.logs : []
-}));
+// 🔥 完全正規化（ここが核心）
+let data = raw.map(item => {
+  let tags = item.tags;
 
-// タグ
+  // 文字列だった場合 → 配列に変換
+  if(typeof tags === "string"){
+    tags = [tags];
+  }
+
+  return {
+    id: item.id || Date.now() + Math.random(),
+    name: item.name || "未設定",
+    memo: item.memo || "",
+    tags: Array.isArray(tags) ? tags : [],
+    logs: Array.isArray(item.logs) ? item.logs : []
+  };
+});
+
+// ---------------- タグ ----------------
 let tagCategories = {
   type:["筋トレ","ストレッチ"],
   body:["上半身","下半身"]
@@ -80,8 +89,8 @@ function clearTags(){
 
 // ---------------- 判定 ----------------
 function match(item){
-  if(selectedTags.length===0) return true;
-  return selectedTags.some(tag=>item.tags.includes(tag));
+  if(selectedTags.length === 0) return true;
+  return selectedTags.some(tag => item.tags.includes(tag));
 }
 
 // ---------------- ログ追加 ----------------
@@ -93,16 +102,14 @@ function addLog(item){
 
 // ---------------- 描画 ----------------
 function render(){
-  let list = document.getElementById("list");
-
-  if(!Array.isArray(data)) data = [];
+  const list = document.getElementById("list");
 
   let items = data.filter(match);
 
   // 回数順
   items.sort((a,b)=>b.logs.length - a.logs.length);
 
-  if(items.length===0){
+  if(items.length === 0){
     list.innerHTML = "データがありません";
     return;
   }
@@ -114,11 +121,12 @@ function render(){
       ? item.logs[item.logs.length-1].slice(0,10)
       : "-";
 
-    let div=document.createElement("div");
-    div.className="card";
+    let div = document.createElement("div");
+    div.className = "card";
 
-    div.innerHTML=`
+    div.innerHTML = `
       <b>${item.name}</b>
+      <div>タグ: ${item.tags.join(", ")}</div>
       <div>回数: ${item.logs.length} / 最終: ${last}</div>
       <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
         やった！
@@ -131,13 +139,9 @@ function render(){
 
 // ---------------- 初期表示 ----------------
 document.addEventListener("DOMContentLoaded", ()=>{
+  selectedTags = []; // 念のため明示
   renderTags();
   render();
-
-  // 🔥 これが効く（タイミングズレ対策）
-  setTimeout(()=>{
-    render();
-  },0);
 });
 </script>
 
