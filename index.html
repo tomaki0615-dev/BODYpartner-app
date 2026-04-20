@@ -494,14 +494,22 @@ function closeModal(){
 ////////////////////
 // 編集削除
 ////////////////////
-function editItem(id){
-  let item=data.find(d=>d.id==id);
-  item.name=prompt("名前",item.name)||item.name;
-  save();
-  render();
-}
 
 function deleteItem(id){
+
+  let item = data.find(d => d.id == id);
+  if(!item) return;
+
+  let ok = confirm(`「${item.name}」を削除しますか？`);
+
+  if(!ok) return;
+
+  data = data.filter(d => d.id != id);
+  save();
+  render();
+
+  toast("削除しました");
+}function deleteItem(id){
   data=data.filter(d=>d.id!=id);
   save();
   render();
