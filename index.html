@@ -5,11 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>筋トレ管理アプリ</title>
 
-<!-- 🔥 ホーム画面アイコン（iOS/Android共通） -->
 <link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" href="icon.png" type="image/png">
+<link rel="icon" href="icon.png">
 
-<!-- 🔥 PWAマニフェスト -->
 <link rel="manifest" href="manifest.json">
 
 <style>
@@ -23,7 +21,10 @@ header{
 }
 
 /* タブ */
-.tab{display:flex;border-bottom:1px solid #ccc;}
+.tab{
+  display:flex;
+  border-bottom:1px solid #ccc;
+}
 .tab button{
   flex:1;
   padding:12px;
@@ -35,8 +36,8 @@ header{
   border-bottom:2px solid #222;
 }
 
-/* カード */
 .container{padding:10px;}
+
 .card{
   background:#fff;
   margin-bottom:10px;
@@ -54,6 +55,17 @@ header{
   background:#666;
   color:#fff;
 }
+
+.tag-select{
+  display:inline-block;
+  padding:4px 8px;
+  margin:2px;
+  border-radius:10px;
+  font-size:12px;
+  background:#eee;
+  cursor:pointer;
+}
+.tag-select.active{background:#222;color:#fff;}
 
 /* ボタン */
 button{
@@ -120,6 +132,7 @@ button{
 
 <header>筋トレ管理</header>
 
+<!-- タブ -->
 <div class="tab">
   <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
   <button id="tabAdd" onclick="switchTab('add')">追加</button>
@@ -128,31 +141,48 @@ button{
 
 <div class="container">
 
+<!-- 検索 -->
 <div id="listTab">
   <div id="filterTags"></div>
   <div id="list"></div>
 </div>
 
+<!-- 追加 -->
 <div id="addTab" style="display:none">
+
   <input id="name" placeholder="名前"><br><br>
+
   <div id="addTags"></div>
+
+  <div>
+    選択中：
+    <span id="selectedAddTags"></span>
+  </div>
+
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
+
   <input type="file" id="imageInput" multiple><br><br>
+
   <button onclick="addItem()">追加</button>
+
 </div>
 
+<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
-  <h3>タグ管理</h3>
+
   <select id="newTagCat">
     <option value="type">type</option>
     <option value="time">time</option>
     <option value="freq">freq</option>
     <option value="body">body</option>
   </select>
+
   <input id="newTagName">
   <button onclick="addTag()">追加</button>
+
   <hr>
   <div id="tagList"></div>
+
 </div>
 
 </div>
@@ -192,7 +222,7 @@ function save(){
 }
 
 ////////////////////
-// タブ
+// タブ切替（完全復活）
 ////////////////////
 function switchTab(tab){
 
@@ -205,111 +235,78 @@ function switchTab(tab){
   tabTag.classList.toggle("active",tab==="tag");
 
   render();
+  renderTags();
+  renderTagManager();
 }
 
 ////////////////////
-// カード描画
+// タグ表示（復活）
 ////////////////////
-function render(){
+function renderTags(){
 
-  list.innerHTML="";
+  let html="";
 
-  data.forEach(item=>{
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    html+=`<div>${cat}</div>`;
 
-    let div=document.createElement("div");
-    div.className="card";
-
-    div.innerHTML=`
-      <b>${item.name}</b><br>
-
-      ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
-
-      <div>${item.memo||""}</div>
-
-      <!-- ⭐ 最終日復活 -->
-      <div>
-        回数：${item.logs?.length||0}
-      </div>
-      <div>
-        最終：${
-          item.logs?.length
-            ? item.logs[item.logs.length-1].date
-            : "-"
-        }
-      </div>
-
-      <div>
-        ${(item.images||[]).map(img=>
-          `<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`
-        ).join("")}
-      </div>
-
-      <button class="big-btn" onclick="addLog(${item.id})">
-        やった！
-      </button>
-
-      <div>
-        <button onclick="editItem(${item.id})">編集</button>
-        <button onclick="deleteItem(${item.id})">削除</button>
-      </div>
-    `;
-
-    list.appendChild(div);
+    tags.forEach(tag=>{
+      html+=`
+        <span class="tag-select ${selectedTags.includes(tag)?"active":""}"
+        onclick="toggleTag('${tag}')">${tag}</span>
+      `;
+    });
   });
+
+  filterTags.innerHTML=html;
+
+  let addHtml="";
+
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    addHtml+=`<div>${cat}</div>`;
+
+    tags.forEach(tag=>{
+      addHtml+=`
+        <span class="tag-select ${addSelectedTags.includes(tag)?"active":""}"
+        onclick="toggleAddTag('${tag}')">${tag}</span>
+      `;
+    });
+  });
+
+  addTags.innerHTML=addHtml;
+
+  selectedAddTags.innerHTML=
+    addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("");
 }
 
-////////////////////
-// ギャラリー
-////////////////////
-let g=[],idx=0;
+function toggleTag(tag){
+  selectedTags=selectedTags.includes(tag)
+    ? selectedTags.filter(t=>t!==tag)
+    : [...selectedTags,tag];
 
-function openGallery(id){
-  let item=data.find(d=>d.id==id);
-  g=item.images;
-  idx=0;
-  modal.style.display="flex";
-  mainImg.src=g[idx];
-}
-
-function next(){
-  idx=(idx+1)%g.length;
-  mainImg.src=g[idx];
-}
-
-function prev(){
-  idx=(idx-1+g.length)%g.length;
-  mainImg.src=g[idx];
-}
-
-function closeModal(){
-  modal.style.display="none";
-}
-
-////////////////////
-// やった
-////////////////////
-function addLog(id){
-  let item=data.find(d=>d.id==id);
-  let today=new Date().toISOString().split("T")[0];
-
-  if(item.logs.some(l=>l.date===today)) return;
-
-  item.logs.push({date:today});
-  save();
   render();
+  renderTags();
+}
+
+function toggleAddTag(tag){
+  addSelectedTags=addSelectedTags.includes(tag)
+    ? addSelectedTags.filter(t=>t!==tag)
+    : [...addSelectedTags,tag];
+
+  renderTags();
 }
 
 ////////////////////
-// 追加
+// 追加（復活）
 ////////////////////
 function addItem(){
 
-  let name=document.getElementById("name").value;
+  let name=document.getElementById("name").value.trim();
   let memo=document.getElementById("memo").value;
   let files=imageInput.files;
 
-  let ps=[];
+  if(!name) return;
 
+  let ps=[];
   for(let f of files){
     ps.push(new Promise(r=>{
       let fr=new FileReader();
@@ -337,22 +334,175 @@ function addItem(){
     addSelectedTags=[];
 
     toast("追加しました");
+
     render();
     switchTab("list");
   });
 }
 
 ////////////////////
-// タグ管理
+// タグ管理（編集削除復活）
 ////////////////////
 function addTag(){
+
   let cat=newTagCat.value;
-  let name=newTagName.value;
+  let name=newTagName.value.trim();
+
+  if(!name) return;
 
   if(!tagCategories[cat].includes(name)){
     tagCategories[cat].push(name);
   }
 
+  save();
+  newTagName.value="";
+  renderTags();
+  renderTagManager();
+}
+
+function renderTagManager(){
+
+  let html="";
+
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    html+=`<h4>${cat}</h4>`;
+
+    tags.forEach(tag=>{
+      html+=`
+        <div>
+          ${tag}
+          <button onclick="editTag('${cat}','${tag}')">編集</button>
+          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
+        </div>
+      `;
+    });
+  });
+
+  tagList.innerHTML=html;
+}
+
+function editTag(cat,old){
+  let n=prompt("編集",old);
+  if(!n) return;
+
+  let arr=tagCategories[cat];
+  arr[arr.indexOf(old)]=n;
+
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+function deleteTag(cat,tag){
+  tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+////////////////////
+// 描画（カード復活）
+////////////////////
+function render(){
+
+  list.innerHTML="";
+
+  data.forEach(item=>{
+
+    let div=document.createElement("div");
+    div.className="card";
+
+    div.innerHTML=`
+      <b>${item.name}</b><br>
+
+      ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
+
+      <div>${item.memo||""}</div>
+
+      <div>回数：${item.logs?.length||0}</div>
+
+      <div>
+        最終：${
+          item.logs?.length
+            ? item.logs[item.logs.length-1].date
+            : "-"
+        }
+      </div>
+
+      <div>
+        ${(item.images||[]).map(img=>
+          `<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`
+        ).join("")}
+      </div>
+
+      <button class="big-btn"
+        onclick="addLog(${item.id})">
+        やった！
+      </button>
+
+      <div>
+        <button onclick="editItem(${item.id})">編集</button>
+        <button onclick="deleteItem(${item.id})">削除</button>
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+////////////////////
+// やった
+////////////////////
+function addLog(id){
+  let item=data.find(d=>d.id==id);
+  let today=new Date().toISOString().split("T")[0];
+
+  if(item.logs.some(l=>l.date===today)) return;
+
+  item.logs.push({date:today});
+  save();
+  render();
+}
+
+////////////////////
+// ギャラリー
+////////////////////
+let g=[],i=0;
+
+function openGallery(id){
+  let item=data.find(d=>d.id==id);
+  g=item.images;
+  i=0;
+  modal.style.display="flex";
+  mainImg.src=g[i];
+}
+
+function next(){
+  i=(i+1)%g.length;
+  mainImg.src=g[i];
+}
+
+function prev(){
+  i=(i-1+g.length)%g.length;
+  mainImg.src=g[i];
+}
+
+function closeModal(){
+  modal.style.display="none";
+}
+
+////////////////////
+// 編集削除
+////////////////////
+function editItem(id){
+  let item=data.find(d=>d.id==id);
+  item.name=prompt("名前",item.name)||item.name;
+  save();
+  render();
+}
+
+function deleteItem(id){
+  data=data.filter(d=>d.id!=id);
   save();
   render();
 }
@@ -371,6 +521,8 @@ function toast(msg){
 // 初期
 ////////////////////
 render();
+renderTags();
+renderTagManager();
 
 </script>
 
