@@ -3,14 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>筋トレ管理アプリ 完全版</title>
+<title>筋トレ管理アプリ</title>
 
 <style>
-body{
-  font-family:-apple-system;
-  margin:0;
-  background:#f5f5f5;
-}
+body{font-family:-apple-system;margin:0;background:#f5f5f5;}
 
 header{
   background:#222;
@@ -24,18 +20,20 @@ header{
   display:flex;
   border-bottom:1px solid #ccc;
 }
+
 .tab button{
   flex:1;
   padding:12px;
   border:none;
   background:#ddd;
 }
+
 .tab button.active{
   background:#fff;
   border-bottom:2px solid #222;
 }
 
-/* コンテナ */
+/* レイアウト */
 .container{padding:10px;}
 
 .card{
@@ -92,7 +90,7 @@ button{
   height:60px;
   object-fit:cover;
   border-radius:8px;
-  margin-top:5px;
+  margin:2px;
 }
 
 /* ギャラリー */
@@ -104,7 +102,6 @@ button{
   justify-content:center;
   align-items:center;
   flex-direction:column;
-  z-index:999;
   color:#fff;
 }
 
@@ -124,16 +121,14 @@ button{
   color:#fff;
   padding:10px 16px;
   border-radius:20px;
-  opacity:0;
-  transition:.3s;
+  display:none;
 }
-.toast.show{opacity:1;}
 </style>
 </head>
 
 <body>
 
-<header>筋トレ管理</header>
+<header>筋トレ管理アプリ</header>
 
 <div class="tab">
   <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
@@ -157,12 +152,13 @@ button{
   <div id="selectedAddTags"></div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
+
   <input type="file" id="imageInput" multiple><br><br>
 
   <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ -->
+<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
   <select id="newTagCat">
     <option value="type">type</option>
@@ -190,13 +186,13 @@ button{
   </div>
 </div>
 
-<div id="toast" class="toast">完了</div>
+<div id="toast" class="toast"></div>
 
 <script>
 
-////////////////////
+////////////////////////
 // データ
-////////////////////
+////////////////////////
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
 let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
@@ -214,9 +210,9 @@ function save(){
   localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-////////////////////
+////////////////////////
 // タブ
-////////////////////
+////////////////////////
 function switchTab(tab){
 
   listTab.style.display=tab==="list"?"block":"none";
@@ -228,18 +224,18 @@ function switchTab(tab){
   tabTag.classList.toggle("active",tab==="tag");
 
   renderTags();
-  render();
   renderTagManager();
+  render();
 }
 
-////////////////////
+////////////////////////
 // タグ
-////////////////////
+////////////////////////
 function renderTags(){
 
   let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<div>${cat}</div>`;
+  Object.entries(tagCategories).forEach(([c,tags])=>{
+    html+=`<div>${c}</div>`;
     tags.forEach(tag=>{
       html+=`
         <span class="tag-select ${selectedTags.includes(tag)?"active":""}"
@@ -250,8 +246,8 @@ function renderTags(){
   filterTags.innerHTML=html;
 
   let addHtml="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    addHtml+=`<div>${cat}</div>`;
+  Object.entries(tagCategories).forEach(([c,tags])=>{
+    addHtml+=`<div>${c}</div>`;
     tags.forEach(tag=>{
       addHtml+=`
         <span class="tag-select ${addSelectedTags.includes(tag)?"active":""}"
@@ -282,17 +278,18 @@ function toggleAddTag(tag){
   renderTags();
 }
 
-////////////////////
-// 追加
-////////////////////
+////////////////////////
+// 追加（ここが重要）
+////////////////////////
 function addItem(){
 
-  let name=name.value;
+  let name=document.getElementById("name").value.trim();
   let memo=document.getElementById("memo").value;
+  let files=document.getElementById("imageInput").files;
 
-  let files=imageInput.files;
+  if(!name) return;
+
   let ps=[];
-
   for(let f of files){
     ps.push(new Promise(r=>{
       let fr=new FileReader();
@@ -314,55 +311,119 @@ function addItem(){
 
     save();
 
-    name.value="";
-    memo.value="";
-    imageInput.value="";
+    document.getElementById("name").value="";
+    document.getElementById("memo").value="";
+    document.getElementById("imageInput").value="";
     addSelectedTags=[];
 
     toast("追加しました");
+
     renderTags();
     render();
     switchTab("list");
   });
 }
 
-////////////////////
-// ギャラリー
-////////////////////
-let current=[],index=0;
+////////////////////////
+// タグ管理（編集・削除復活）
+////////////////////////
+function addTag(){
+  let cat=newTagCat.value;
+  let name=newTagName.value.trim();
 
-function openGallery(item,i=0){
-  current=item.images;
-  index=i;
-  modal.style.display="flex";
-  draw();
+  if(!name) return;
+
+  if(!tagCategories[cat].includes(name)){
+    tagCategories[cat].push(name);
+  }
+
+  save();
+  newTagName.value="";
+  renderTags();
+  renderTagManager();
 }
 
-function draw(){
-  mainImg.src=current[index];
+function renderTagManager(){
+
+  let html="";
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    html+=`<h4>${cat}</h4>`;
+
+    tags.forEach(tag=>{
+      html+=`
+        <div>
+          ${tag}
+          <button onclick="editTag('${cat}','${tag}')">編集</button>
+          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
+        </div>
+      `;
+    });
+  });
+
+  tagList.innerHTML=html;
+}
+
+function deleteTag(cat,tag){
+  tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+function editTag(cat,old){
+  let n=prompt("編集",old);
+  if(!n) return;
+
+  let arr=tagCategories[cat];
+  let i=arr.indexOf(old);
+  arr[i]=n;
+
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+////////////////////////
+// ギャラリー
+////////////////////////
+let g=[],idx=0;
+
+function openGallery(item,i=0){
+  g=item.images;
+  idx=i;
+  modal.style.display="flex";
+  mainImg.src=g[idx];
 }
 
 function next(){
-  index=(index+1)%current.length;
-  draw();
+  idx=(idx+1)%g.length;
+  mainImg.src=g[idx];
 }
 
 function prev(){
-  index=(index-1+current.length)%current.length;
-  draw();
+  idx=(idx-1+g.length)%g.length;
+  mainImg.src=g[idx];
 }
 
 function closeModal(){
   modal.style.display="none";
 }
 
-////////////////////
-// カード描画（ここが重要）
-////////////////////
+////////////////////////
+// フィルタ
+////////////////////////
+function match(item){
+  if(selectedTags.length===0) return true;
+  return selectedTags.some(t=>item.tags.includes(t));
+}
+
+////////////////////////
+// 描画（完全復活）
+////////////////////////
 function render(){
   list.innerHTML="";
 
-  data.forEach(item=>{
+  data.filter(match).forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
 
@@ -396,9 +457,9 @@ function render(){
   });
 }
 
-////////////////////
+////////////////////////
 // やった
-////////////////////
+////////////////////////
 function addLog(id){
   let item=data.find(d=>d.id==id);
   let today=new Date().toISOString().split("T")[0];
@@ -410,9 +471,9 @@ function addLog(id){
   render();
 }
 
-////////////////////
-// 編集・削除
-////////////////////
+////////////////////////
+// 編集削除
+////////////////////////
 function editItem(id){
   let item=data.find(d=>d.id==id);
   item.name=prompt("名前",item.name)||item.name;
@@ -426,41 +487,24 @@ function deleteItem(id){
   render();
 }
 
-////////////////////
-// タグ管理
-////////////////////
-function addTag(){
-  let cat=newTagCat.value;
-  let name=newTagName.value;
-
-  if(!tagCategories[cat].includes(name)){
-    tagCategories[cat].push(name);
-  }
-
-  save();
-  renderTags();
-  renderTagManager();
-}
-
-function renderTagManager(){
-  tagList.innerHTML=Object.entries(tagCategories).map(([c,t])=>
-    `<h4>${c}</h4>`+
-    t.map(x=>`<div>${x}</div>`).join("")
-  ).join("");
-}
-
-////////////////////
-// UI
-////////////////////
+////////////////////////
+// トースト
+////////////////////////
 function toast(msg){
-  toastBox.textContent=msg;
-  toastBox.classList.add("show");
-  setTimeout(()=>toastBox.classList.remove("show"),1500);
+  let t=document.getElementById("toast");
+  t.textContent=msg;
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1500);
 }
+
+////////////////////////
+// 初期化
+////////////////////////
+renderTags();
+renderTagManager();
+render();
 
 </script>
-
-<div id="toast" class="toast"></div>
 
 </body>
 </html>
