@@ -11,14 +11,9 @@
 <style>
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
 
-header{
-  background:#222;
-  color:#fff;
-  padding:10px;
-  text-align:center;
-}
+header{background:#222;color:#fff;padding:10px;text-align:center;}
 
-/* タブ（iOS風） */
+/* タブ */
 .tab{
   display:flex;
   background:#eee;
@@ -51,68 +46,26 @@ header{
 }
 
 /* タグ */
-.tag{
-  display:inline-block;
-  padding:4px 8px;
-  margin:2px;
-  border-radius:10px;
-  font-size:12px;
-  background:#666;
-  color:#fff;
-}
-
-.tag-select{
-  display:inline-block;
-  padding:4px 8px;
-  margin:2px;
-  border-radius:10px;
-  font-size:12px;
-  background:#eee;
-  cursor:pointer;
-}
+.tag{background:#666;color:#fff;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;}
+.tag-select{background:#eee;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;cursor:pointer;}
 .tag-select.active{background:#222;color:#fff;}
 
 /* ボタン */
-button{
-  padding:5px 10px;
-  margin:2px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  background:#fff;
-}
+button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;background:#fff;}
+.big-btn{background:#2e7d32;color:#fff;border:none;width:100%;padding:10px;border-radius:10px;}
 
-.big-btn{
-  background:#2e7d32;
-  color:#fff;
-  border:none;
-  padding:10px;
-  width:100%;
-  border-radius:10px;
-}
-
-/* サムネ */
-.thumb{
-  width:60px;
-  height:60px;
-  object-fit:cover;
-  border-radius:8px;
-  margin:2px;
-}
+.thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;margin:2px;}
 
 /* ギャラリー */
 .modal{
-  position:fixed;
-  inset:0;
+  position:fixed;inset:0;
   background:rgba(0,0,0,0.92);
   display:none;
   justify-content:center;
   align-items:center;
   flex-direction:column;
 }
-#mainImg{
-  width:90vw;
-  max-width:600px;
-}
+#mainImg{width:90vw;max-width:600px;}
 
 /* トースト */
 .toast{
@@ -143,13 +96,11 @@ button{
 
 <!-- 検索 -->
 <div id="listTab">
-
 <button onclick="toggleMode()">検索：<span id="mode">OR</span></button>
-<button onclick="toggleFavFilter()">★お気に入りのみ</button>
+<button onclick="toggleFavFilter()">★お気に入り</button>
 
 <div id="filterTags"></div>
 <div id="list"></div>
-
 </div>
 
 <!-- 追加 -->
@@ -159,8 +110,7 @@ button{
 <div id="addTags"></div>
 <div id="selectedAddTags"></div>
 
-<textarea id="memo" placeholder="メモ"></textarea><br><br>
-
+<textarea id="memo"></textarea><br><br>
 <input type="file" id="imageInput" multiple><br><br>
 
 <button onclick="addItem()">追加</button>
@@ -230,7 +180,7 @@ renderTags();
 renderTagManager();
 }
 
-/* モード */
+/* 検索モード */
 function toggleMode(){
 mode=mode==="OR"?"AND":"OR";
 document.getElementById("mode").innerText=mode;
@@ -291,60 +241,9 @@ addSelectedTags=addSelectedTags.includes(tag)
 renderTags();
 }
 
-/* タグ管理 */
-function addTag(){
-let cat=newTagCat.value;
-let name=newTagName.value.trim();
-if(!name)return;
-
-if(!tagCategories[cat].includes(name)){
-tagCategories[cat].push(name);
-}
-
-save();
-newTagName.value="";
-renderTags();
-renderTagManager();
-}
-
-function renderTagManager(){
-let html="";
-Object.entries(tagCategories).forEach(([cat,tags])=>{
-html+=`<h4>${cat}</h4>`;
-tags.forEach(tag=>{
-html+=`
-<div>
-${tag}
-<button onclick="editTag('${cat}','${tag}')">編集</button>
-<button onclick="deleteTag('${cat}','${tag}')">削除</button>
-</div>
-`;
-});
-});
-tagList.innerHTML=html;
-}
-
-function editTag(cat,old){
-let n=prompt("編集",old);
-if(!n)return;
-
-let arr=tagCategories[cat];
-arr[arr.indexOf(old)]=n;
-
-save();
-renderTags();
-renderTagManager();
-}
-
-function deleteTag(cat,tag){
-tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
-save();
-renderTags();
-renderTagManager();
-}
-
 /* 追加 */
 function addItem(){
+
 let name=document.getElementById("name").value.trim();
 if(!name)return;
 
@@ -361,6 +260,7 @@ fr.readAsDataURL(f);
 }
 
 Promise.all(ps).then(imgs=>{
+
 data.push({
 id:Date.now(),
 name,
@@ -373,14 +273,20 @@ favorite:false
 
 save();
 
+// 🔥 トースト
+toast("追加しました");
+
+// 入力クリア
 document.getElementById("name").value="";
 document.getElementById("memo").value="";
 imageInput.value="";
 addSelectedTags=[];
 
-toast("追加しました");
-
+// 少し見せてから戻る
+setTimeout(()=>{
 switchTab("list");
+},500);
+
 });
 }
 
@@ -480,14 +386,37 @@ list.appendChild(div);
 });
 }
 
-/* ギャラリー */
-let g=[],i=0;
+/* ギャラリー（スワイプ対応） */
+let g=[],i=0,startX=0;
 
 function openGallery(id){
+
 let item=data.find(d=>d.id==id);
 g=item.images;
 i=0;
+
 modal.style.display="flex";
+mainImg.src=g[i];
+
+mainImg.ontouchstart=(e)=>{
+startX=e.touches[0].clientX;
+};
+
+mainImg.ontouchend=(e)=>{
+let endX=e.changedTouches[0].clientX;
+
+if(startX-endX>50) next();
+if(endX-startX>50) prev();
+};
+}
+
+function next(){
+i=(i+1)%g.length;
+mainImg.src=g[i];
+}
+
+function prev(){
+i=(i-1+g.length)%g.length;
 mainImg.src=g[i];
 }
 
