@@ -83,7 +83,7 @@ button{
   border-radius:10px;
 }
 
-/* ===== カードサムネ ===== */
+/* サムネ */
 .card img{
   width:60px;
   height:60px;
@@ -92,7 +92,7 @@ button{
   margin-top:5px;
 }
 
-/* ===== モーダル ===== */
+/* モーダル */
 .modal-overlay{
   position:fixed;
   top:0;left:0;
@@ -110,19 +110,17 @@ button{
   color:#fff;
 }
 
-/* メイン画像 */
 #mainImg{
   width:90vw;
   max-width:600px;
   border-radius:10px;
+  cursor:zoom-in;
   transition:0.2s;
   touch-action:pan-y;
-  cursor:zoom-in;
 }
 
 #mainImg.zoomed{
   width:95vw !important;
-  max-width:900px;
 }
 
 /* インジケーター */
@@ -158,27 +156,20 @@ button{
 
 <div class="container">
 
-<!-- 検索 -->
 <div id="listTab">
   <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
   <div id="filterTags"></div>
   <div id="list"></div>
 </div>
 
-<!-- 追加 -->
 <div id="addTab" style="display:none">
   <input id="name" placeholder="名前"><br><br>
-
   <div id="addTags"></div>
-
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
-
   <input type="file" id="imageInput" multiple><br><br>
-
   <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
   <h3>タグ管理</h3>
 
@@ -217,7 +208,6 @@ let selectedTags = [];
 let addSelectedTags = [];
 let mode = "OR";
 
-/* DOM */
 const listTab = document.getElementById("listTab");
 const addTab = document.getElementById("addTab");
 const tagTab = document.getElementById("tagTab");
@@ -246,10 +236,10 @@ function switchTab(tab){
   render();
 }
 
-/* ===== タグ ===== */
+/* ===== タグ省略（前と同じ） ===== */
 function addTag(){
-  let cat = document.getElementById("newTagCat").value;
-  let name = document.getElementById("newTagName").value.trim();
+  let cat = newTagCat.value;
+  let name = newTagName.value.trim();
   if(!name) return;
 
   if(!tagCategories[cat].includes(name)){
@@ -257,7 +247,7 @@ function addTag(){
     save();
   }
 
-  document.getElementById("newTagName").value="";
+  newTagName.value="";
   renderTags();
   renderTagManager();
 }
@@ -364,20 +354,32 @@ function addItem(){
     });
 
     save();
-
-    document.getElementById("name").value="";
-    document.getElementById("memo").value="";
-    document.getElementById("imageInput").value="";
-    addSelectedTags=[];
-
     switchTab("list");
   });
+}
+
+/* ===== ★同日1回制限付きログ ===== */
+function addLog(id){
+  let item = data.find(d=>d.id==id);
+  if(!item) return;
+
+  let today = new Date().toISOString().split('T')[0];
+
+  // 同日チェック
+  if(item.logs.some(l=>l.date===today)){
+    alert("今日はすでに記録済みだよ");
+    return;
+  }
+
+  item.logs.push({date:today});
+  save();
+  render();
 }
 
 /* ===== 検索 ===== */
 function toggleMode(){
   mode = mode==="OR"?"AND":"OR";
-  document.getElementById("mode").innerText = mode;
+  modeSpan.innerText = mode;
   render();
 }
 
@@ -389,9 +391,9 @@ function match(item){
     : selectedTags.some(t=>item.tags.includes(t));
 }
 
-/* ===== ギャラリー（スワイプ＋インジケーター） ===== */
+/* ===== ギャラリー ===== */
 function openDetail(item){
-  let modal = document.getElementById("modalContent");
+  let modal = modalContent;
 
   let index = 0;
   let startX = 0;
@@ -404,7 +406,7 @@ function openDetail(item){
 
       <div>
         <button onclick="prev()">◀</button>
-        <span>${index+1} / ${item.images.length}</span>
+        <span>${index+1}/${item.images.length}</span>
         <button onclick="next()">▶</button>
       </div>
 
@@ -413,17 +415,24 @@ function openDetail(item){
           <div class="dot ${i===index?'active':''}"></div>
         `).join("")}
       </div>
+
+      <div style="margin-top:10px;">
+        <button class="big-btn"
+          onclick="addLog(${item.id})">
+          やった！
+        </button>
+      </div>
     `;
 
     const img = document.getElementById("mainImg");
 
     img.onclick = ()=>img.classList.toggle("zoomed");
 
-    img.ontouchstart = (e)=>{
+    img.ontouchstart = e=>{
       startX = e.touches[0].clientX;
     };
 
-    img.ontouchend = (e)=>{
+    img.ontouchend = e=>{
       let endX = e.changedTouches[0].clientX;
       if(startX - endX > 50) next();
       else if(endX - startX > 50) prev();
@@ -441,12 +450,12 @@ function openDetail(item){
   };
 
   render();
-  document.getElementById("modalOverlay").style.display="flex";
+  modalOverlay.style.display="flex";
 }
 
 function closeModal(e){
   if(e.target.id==="modalOverlay"){
-    document.getElementById("modalOverlay").style.display="none";
+    modalOverlay.style.display="none";
   }
 }
 
@@ -472,16 +481,19 @@ function render(){
 
       <div>${item.memo||""}</div>
 
-      <div>枚数: ${item.images.length}</div>
+      <div>回数: ${item.logs.length}</div>
+
+      <div>
+        最終: ${
+          item.logs.length
+            ? item.logs[item.logs.length-1].date
+            : "-"
+        }
+      </div>
 
       <div>
         ${item.images[0] ? `<img src="${item.images[0]}">` : ""}
       </div>
-
-      <button class="big-btn"
-        onclick="event.stopPropagation();">
-        やった！
-      </button>
     `;
 
     list.appendChild(div);
