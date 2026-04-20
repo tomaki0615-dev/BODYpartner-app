@@ -36,7 +36,6 @@ header{
   color:#fff;
 }
 
-/* コンテナ */
 .container{padding:10px;}
 
 .card{
@@ -92,7 +91,7 @@ button{
   font-weight:bold;
 }
 
-/* 編集・削除（グレー控えめ） */
+/* 編集・削除 */
 .action-btn{
   background:#f0f0f0;
   color:#444;
@@ -131,7 +130,6 @@ button{
   max-width:600px;
   border-radius:10px;
   transition:0.2s;
-  touch-action:pan-y;
   cursor:zoom-in;
 }
 
@@ -302,59 +300,6 @@ function toggleAddTag(tag){
     : [...addSelectedTags,tag];
 }
 
-/* ===== タグ管理 ===== */
-function addTag(){
-  let cat = newTagCat.value;
-  let name = newTagName.value.trim();
-  if(!name) return;
-
-  if(!tagCategories[cat].includes(name)){
-    tagCategories[cat].push(name);
-    save();
-  }
-
-  newTagName.value="";
-  renderTags();
-  renderTagManager();
-}
-
-function deleteTag(cat, tag){
-  tagCategories[cat] = tagCategories[cat].filter(t=>t!==tag);
-  save();
-  renderTags();
-  renderTagManager();
-}
-
-function editTag(cat, oldTag){
-  let n = prompt("編集", oldTag);
-  if(!n) return;
-
-  let arr = tagCategories[cat];
-  let i = arr.indexOf(oldTag);
-  if(i>=0) arr[i]=n;
-
-  save();
-  renderTags();
-  renderTagManager();
-}
-
-function renderTagManager(){
-  let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<h4>${cat}</h4>`;
-    tags.forEach(tag=>{
-      html+=`
-        <div>
-          ${tag}
-          <button onclick="editTag('${cat}','${tag}')">編集</button>
-          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
-        </div>
-      `;
-    });
-  });
-  tagList.innerHTML=html;
-}
-
 /* ===== 追加 ===== */
 function addItem(){
   let name=document.getElementById("name").value;
@@ -403,22 +348,7 @@ function addLog(id){
   render();
 }
 
-/* ===== 検索 ===== */
-function toggleMode(){
-  mode = mode==="OR"?"AND":"OR";
-  document.getElementById("mode").innerText=mode;
-  render();
-}
-
-function match(item){
-  if(selectedTags.length===0) return true;
-
-  return mode==="AND"
-    ? selectedTags.every(t=>item.tags.includes(t))
-    : selectedTags.some(t=>item.tags.includes(t));
-}
-
-/* ===== ギャラリー（画像専用） ===== */
+/* ===== ギャラリー（スワイプ復活版） ===== */
 function openDetail(item){
   let i=0;
 
@@ -438,6 +368,23 @@ function openDetail(item){
         `).join("")}
       </div>
     `;
+
+    const img=document.getElementById("mainImg");
+
+    img.onclick=()=>img.classList.toggle("zoomed");
+
+    let startX=0;
+
+    img.ontouchstart=(e)=>{
+      startX=e.touches[0].clientX;
+    };
+
+    img.ontouchend=(e)=>{
+      let endX=e.changedTouches[0].clientX;
+
+      if(startX-endX>50) next();
+      if(endX-startX>50) prev();
+    };
   }
 
   window.next=()=>{
@@ -454,7 +401,7 @@ function openDetail(item){
   modalOverlay.style.display="flex";
 }
 
-/* ===== 削除・編集 ===== */
+/* ===== 編集・削除 ===== */
 function deleteItem(id){
   if(!confirm("削除する？")) return;
   data=data.filter(d=>d.id!==id);
@@ -479,6 +426,21 @@ function editItem(id){
   render();
 }
 
+/* ===== 検索 ===== */
+function toggleMode(){
+  mode=mode==="OR"?"AND":"OR";
+  document.getElementById("mode").innerText=mode;
+  render();
+}
+
+function match(item){
+  if(selectedTags.length===0) return true;
+
+  return mode==="AND"
+    ? selectedTags.every(t=>item.tags.includes(t))
+    : selectedTags.some(t=>item.tags.includes(t));
+}
+
 /* ===== 描画 ===== */
 function render(){
   list.innerHTML="";
@@ -486,6 +448,7 @@ function render(){
   data.filter(match).forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
+
     div.onclick=()=>openDetail(item);
 
     div.innerHTML=`
@@ -499,9 +462,11 @@ function render(){
 
       <div>回数: ${item.logs.length}</div>
 
-      <div>
-        最終: ${item.logs.length?item.logs[item.logs.length-1].date:"-"}
-      </div>
+      <div>最終: ${
+        item.logs.length
+          ? item.logs[item.logs.length-1].date
+          : "-"
+      }</div>
 
       <div>
         ${item.images?.[0]?`<img src="${item.images[0]}">`:""}
