@@ -44,6 +44,7 @@ header{
   border-radius:10px;
 }
 
+/* ===== タグ ===== */
 .tag{
   display:inline-block;
   padding:4px 8px;
@@ -69,18 +70,38 @@ header{
   color:#fff;
 }
 
+/* ===== ボタン共通 ===== */
 button{
   padding:5px 10px;
   margin:2px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  background:#fff;
+  cursor:pointer;
+  font-size:12px;
 }
 
+/* メインボタン（やった！） */
 .big-btn{
-  background:#28a745;
+  background:#2f7d32;
   color:#fff;
   border:none;
   padding:10px;
   width:100%;
   border-radius:10px;
+  font-weight:bold;
+}
+
+/* ===== 編集・削除（グレー控えめ） ===== */
+.action-btn{
+  background:#f0f0f0;
+  color:#444;
+  border:1px solid #ddd;
+  font-size:11px;
+}
+
+.action-btn:hover{
+  background:#e6e6e6;
 }
 
 /* サムネ */
@@ -92,7 +113,7 @@ button{
   margin-top:5px;
 }
 
-/* モーダル（ギャラリー） */
+/* モーダル */
 .modal-overlay{
   position:fixed;
   top:0;left:0;
@@ -193,7 +214,7 @@ button{
 
 </div>
 
-<!-- ギャラリーモーダル -->
+<!-- モーダル -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal" id="modalContent"></div>
 </div>
@@ -240,129 +261,33 @@ function switchTab(tab){
   render();
 }
 
-/* ===== タグ管理（省略なし） ===== */
-function addTag(){
-  let cat = newTagCat.value;
-  let name = newTagName.value.trim();
-  if(!name) return;
+/* ===== 編集・削除 ===== */
+function deleteItem(id){
+  if(!confirm("削除する？")) return;
 
-  if(!tagCategories[cat].includes(name)){
-    tagCategories[cat].push(name);
-    save();
-  }
-
-  newTagName.value="";
-  renderTags();
-  renderTagManager();
-}
-
-function deleteTag(cat, tag){
-  tagCategories[cat] = tagCategories[cat].filter(t=>t!==tag);
+  data = data.filter(d=>d.id!==id);
   save();
-  renderTags();
-  renderTagManager();
-}
-
-function editTag(cat, oldTag){
-  let newName = prompt("新しいタグ名", oldTag);
-  if(!newName) return;
-
-  let arr = tagCategories[cat];
-  let idx = arr.indexOf(oldTag);
-  if(idx !== -1) arr[idx] = newName;
-
-  save();
-  renderTags();
-  renderTagManager();
-}
-
-function renderTagManager(){
-  let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html += `<h4>${cat}</h4>`;
-    tags.forEach(tag=>{
-      html += `
-        <div>
-          ${tag}
-          <button onclick="editTag('${cat}','${tag}')">編集</button>
-          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
-        </div>
-      `;
-    });
-  });
-  tagList.innerHTML = html;
-}
-
-/* ===== タグUI ===== */
-function renderTags(){
-  let html="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<div>${cat}：</div>`;
-    tags.forEach(tag=>{
-      html+=`<span class="tag-select ${selectedTags.includes(tag)?"active":""}" onclick="toggleTag('${tag}')">${tag}</span>`;
-    });
-  });
-  filterTags.innerHTML=html;
-
-  let addHtml="";
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    addHtml+=`<div>${cat}：</div>`;
-    tags.forEach(tag=>{
-      addHtml+=`<span class="tag-select ${addSelectedTags.includes(tag)?"active":""}" onclick="toggleAddTag('${tag}')">${tag}</span>`;
-    });
-  });
-  addTags.innerHTML=addHtml;
-}
-
-function toggleTag(tag){
-  selectedTags = selectedTags.includes(tag)
-    ? selectedTags.filter(t=>t!==tag)
-    : [...selectedTags,tag];
-
-  renderTags();
   render();
 }
 
-function toggleAddTag(tag){
-  addSelectedTags = addSelectedTags.includes(tag)
-    ? addSelectedTags.filter(t=>t!==tag)
-    : [...addSelectedTags,tag];
+function editItem(id){
+  let item = data.find(d=>d.id===id);
+  if(!item) return;
 
-  renderTags();
+  let newName = prompt("名前", item.name);
+  if(newName===null) return;
+
+  let newMemo = prompt("メモ", item.memo||"");
+  if(newMemo===null) return;
+
+  item.name = newName;
+  item.memo = newMemo;
+
+  save();
+  render();
 }
 
-/* ===== 追加 ===== */
-function addItem(){
-  let name = document.getElementById("name").value;
-  if(!name) return;
-
-  let files = document.getElementById("imageInput").files;
-  let promises = [];
-
-  for(let file of files){
-    promises.push(new Promise(res=>{
-      let reader = new FileReader();
-      reader.onload = ()=>res(reader.result);
-      reader.readAsDataURL(file);
-    }));
-  }
-
-  Promise.all(promises).then(results=>{
-    data.push({
-      id:Date.now(),
-      name,
-      tags:addSelectedTags,
-      memo:document.getElementById("memo").value,
-      images:results,
-      logs:[]
-    });
-
-    save();
-    switchTab("list");
-  });
-}
-
-/* ===== ★同日1回制限ログ ===== */
+/* ===== ログ（同日1回制限） ===== */
 function addLog(id){
   let item = data.find(d=>d.id==id);
   if(!item) return;
@@ -370,7 +295,7 @@ function addLog(id){
   let today = new Date().toISOString().split('T')[0];
 
   if(item.logs.some(l=>l.date===today)){
-    alert("今日はもう記録済みだよ");
+    alert("今日はすでに記録済み");
     return;
   }
 
@@ -379,30 +304,13 @@ function addLog(id){
   render();
 }
 
-/* ===== 検索 ===== */
-function toggleMode(){
-  mode = mode==="OR"?"AND":"OR";
-  modeSpan.innerText = mode;
-  render();
-}
-
-function match(item){
-  if(selectedTags.length===0) return true;
-
-  return mode==="AND"
-    ? selectedTags.every(t=>item.tags.includes(t))
-    : selectedTags.some(t=>item.tags.includes(t));
-}
-
-/* ===== ギャラリー（画像専用） ===== */
+/* ===== ギャラリー ===== */
 function openDetail(item){
-  let modal = modalContent;
-
   let index = 0;
   let startX = 0;
 
   function render(){
-    modal.innerHTML = `
+    modalContent.innerHTML = `
       <div>
         <img id="mainImg" src="${item.images[index]}">
       </div>
@@ -419,29 +327,15 @@ function openDetail(item){
         `).join("")}
       </div>
     `;
-
-    const img = document.getElementById("mainImg");
-
-    img.onclick = ()=>img.classList.toggle("zoomed");
-
-    img.ontouchstart = e=>{
-      startX = e.touches[0].clientX;
-    };
-
-    img.ontouchend = e=>{
-      let endX = e.changedTouches[0].clientX;
-      if(startX - endX > 50) next();
-      else if(endX - startX > 50) prev();
-    };
   }
 
-  window.next = function(){
-    index = (index + 1) % item.images.length;
+  window.next = ()=>{
+    index = (index+1)%item.images.length;
     render();
   };
 
-  window.prev = function(){
-    index = (index - 1 + item.images.length) % item.images.length;
+  window.prev = ()=>{
+    index = (index-1+item.images.length)%item.images.length;
     render();
   };
 
@@ -449,15 +343,9 @@ function openDetail(item){
   modalOverlay.style.display="flex";
 }
 
-function closeModal(e){
-  if(e.target.id==="modalOverlay"){
-    modalOverlay.style.display="none";
-  }
-}
-
-/* ===== 描画 ===== */
+/* ===== カード描画 ===== */
 function render(){
-  let filtered = data.filter(match);
+  let filtered = data;
 
   list.innerHTML="";
 
@@ -472,29 +360,41 @@ function render(){
       <b>${item.name}</b><br>
 
       <div>
-        ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+        ${item.tags?.map(t=>`<span class="tag">${t}</span>`).join("")||""}
       </div>
 
       <div>${item.memo||""}</div>
 
-      <div>回数: ${item.logs.length}</div>
+      <div>回数: ${item.logs?.length||0}</div>
 
       <div>
         最終: ${
-          item.logs.length
+          item.logs?.length
             ? item.logs[item.logs.length-1].date
             : "-"
         }
       </div>
 
       <div>
-        ${item.images[0] ? `<img src="${item.images[0]}">` : ""}
+        ${item.images?.[0] ? `<img src="${item.images[0]}">` : ""}
       </div>
 
       <button class="big-btn"
         onclick="event.stopPropagation(); addLog(${item.id})">
         やった！
       </button>
+
+      <div style="margin-top:6px;">
+        <button class="action-btn"
+          onclick="event.stopPropagation(); editItem(${item.id})">
+          編集
+        </button>
+
+        <button class="action-btn"
+          onclick="event.stopPropagation(); deleteItem(${item.id})">
+          削除
+        </button>
+      </div>
     `;
 
     list.appendChild(div);
@@ -502,8 +402,6 @@ function render(){
 }
 
 /* init */
-renderTags();
-renderTagManager();
 render();
 </script>
 
