@@ -3,48 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>筋トレ管理アプリ 完全版</title>
+<title>筋トレ管理アプリ</title>
 
 <style>
-body{
-  font-family:-apple-system;
-  margin:0;
-  background:#f5f5f5;
-}
-
-header{
-  background:#222;
-  color:#fff;
-  padding:10px;
-  text-align:center;
-}
-
-.tab{
-  display:flex;
-}
-
-.tab button{
-  flex:1;
-  padding:10px;
-  border:none;
-  background:#ddd;
-}
-
-.tab button.active{
-  background:#222;
-  color:#fff;
-}
-
-.container{
-  padding:10px;
-}
-
-.card{
-  background:#fff;
-  margin-bottom:10px;
-  padding:10px;
-  border-radius:10px;
-}
+body{font-family:-apple-system;margin:0;background:#f5f5f5;}
+header{background:#222;color:#fff;padding:10px;text-align:center;}
+.tab{display:flex;}
+.tab button{flex:1;padding:10px;border:none;background:#ddd;}
+.tab button.active{background:#222;color:#fff;}
+.container{padding:10px;}
+.card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
 
 .tag{
   display:inline-block;
@@ -70,69 +38,67 @@ header{
   cursor:pointer;
 }
 
-.tag-select.active{
-  background:#222;
-  color:#fff;
+.tag-select.active{background:#222;color:#fff;}
+
+.small-btn{
+  font-size:12px;
+  margin-left:5px;
 }
 
-button{
-  padding:5px 10px;
-  margin:2px;
-}
+button{padding:5px 10px;margin:2px;}
+.big-btn{background:#28a745;color:#fff;border:none;padding:10px;width:100%;border-radius:10px;}
 
-.big-btn{
-  background:#28a745;
-  color:#fff;
-  border:none;
-  padding:10px;
-  width:100%;
-  border-radius:10px;
-}
-
-.star{
-  font-size:20px;
-  cursor:pointer;
-}
-
-img{
-  width:80px;
-  margin:5px;
-  border-radius:8px;
-}
+input,select{padding:5px;margin:2px;}
 </style>
 </head>
 
 <body>
 
-<header>筋トレ・ストレッチ管理</header>
+<header>筋トレ管理アプリ</header>
 
 <div class="tab">
   <button onclick="switchTab('list')" id="tabList" class="active">検索</button>
   <button onclick="switchTab('add')" id="tabAdd">追加</button>
+  <button onclick="switchTab('tag')" id="tabTag">タグ管理</button>
 </div>
 
 <div class="container">
 
+<!-- 検索 -->
 <div id="listTab">
-
-<button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
-
-<div id="filterTags"></div>
-<div id="list"></div>
-
+  <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
+  <div id="filterTags"></div>
+  <div id="list"></div>
 </div>
 
+<!-- 追加 -->
 <div id="addTab" style="display:none">
+  <input id="name" placeholder="名前"><br><br>
+  <div id="addTags"></div>
+  <textarea id="memo" placeholder="メモ"></textarea><br><br>
+  <input type="file" id="imageInput" multiple><br><br>
+  <button onclick="addItem()">追加</button>
+</div>
 
-<input id="name" placeholder="名前"><br><br>
+<!-- タグ管理 -->
+<div id="tagTab" style="display:none">
 
-<div id="addTags"></div>
+<h3>タグ追加</h3>
 
-<textarea id="memo" placeholder="メモ"></textarea><br><br>
+<select id="newTagCat">
+  <option value="type">type</option>
+  <option value="time">time</option>
+  <option value="freq">freq</option>
+  <option value="body">body</option>
+</select>
 
-<input type="file" id="imageInput" multiple><br><br>
+<input id="newTagName" placeholder="タグ名">
+<button onclick="addTag()">追加</button>
 
-<button onclick="addItem()">追加</button>
+<hr>
+
+<h3>タグ一覧</h3>
+<div id="tagList"></div>
 
 </div>
 
@@ -141,34 +107,109 @@ img{
 <script>
 let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
-const tagCategories = {
+let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || JSON.stringify({
   type:["筋トレ","ストレッチ","マッサージ"],
   time:["朝","昼","夜"],
   freq:["毎日","週3","月水金"],
   body:["上半身","下半身","体幹","顔"]
-};
+}));
 
 let selectedTags = [];
 let addSelectedTags = [];
 let mode = "OR";
 
-// DOM
 const listTab = document.getElementById("listTab");
 const addTab = document.getElementById("addTab");
+const tagTab = document.getElementById("tagTab");
+
 const filterTags = document.getElementById("filterTags");
 const addTags = document.getElementById("addTags");
 const list = document.getElementById("list");
 
 function save(){
   localStorage.setItem("trainingApp", JSON.stringify(data));
+  localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
 }
 
 function switchTab(tab){
   listTab.style.display = tab==="list"?"block":"none";
   addTab.style.display = tab==="add"?"block":"none";
+  tagTab.style.display = tab==="tag"?"block":"none";
+
   tabList.classList.toggle("active",tab==="list");
   tabAdd.classList.toggle("active",tab==="add");
+  tabTag.classList.toggle("active",tab==="tag");
+
+  renderTags();
+  renderTagManager();
+  render();
 }
+
+/* ======================
+   タグ管理
+====================== */
+
+function addTag(){
+  let cat = document.getElementById("newTagCat").value;
+  let name = document.getElementById("newTagName").value.trim();
+
+  if(!name) return;
+
+  if(!tagCategories[cat].includes(name)){
+    tagCategories[cat].push(name);
+    save();
+  }
+
+  document.getElementById("newTagName").value="";
+  renderTags();
+  renderTagManager();
+}
+
+function deleteTag(cat, tag){
+  tagCategories[cat] = tagCategories[cat].filter(t=>t!==tag);
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+function editTag(cat, oldTag){
+  let newName = prompt("新しいタグ名", oldTag);
+  if(!newName) return;
+
+  let listArr = tagCategories[cat];
+  let idx = listArr.indexOf(oldTag);
+  if(idx !== -1){
+    listArr[idx] = newName;
+  }
+
+  save();
+  renderTags();
+  renderTagManager();
+}
+
+function renderTagManager(){
+  let html="";
+
+  Object.entries(tagCategories).forEach(([cat,tags])=>{
+    html += `<h4>${cat}</h4>`;
+
+    tags.forEach(tag=>{
+      html += `
+        <div>
+          ${tag}
+          <button class="small-btn" onclick="editTag('${cat}','${tag}')">編集</button>
+          <button class="small-btn" onclick="deleteTag('${cat}','${tag}')">削除</button>
+        </div>
+      `;
+    });
+  });
+
+  tagList.innerHTML = html;
+}
+
+/* ======================
+   タグUI
+====================== */
 
 function renderTags(){
   let html="";
@@ -207,6 +248,10 @@ function toggleAddTag(tag){
   renderTags();
 }
 
+/* ======================
+   データ処理
+====================== */
+
 function addItem(){
   let nameEl = document.getElementById("name");
   let memoEl = document.getElementById("memo");
@@ -219,12 +264,11 @@ function addItem(){
   let promises = [];
 
   for(let file of files){
-    let p = new Promise(res=>{
+    promises.push(new Promise(res=>{
       let reader = new FileReader();
       reader.onload = ()=>res(reader.result);
       reader.readAsDataURL(file);
-    });
-    promises.push(p);
+    }));
   }
 
   Promise.all(promises).then(results=>{
@@ -246,8 +290,6 @@ function addItem(){
     addSelectedTags=[];
 
     switchTab("list");
-    renderTags();
-    render();
   });
 }
 
@@ -280,15 +322,8 @@ function toggleFav(item){
   render();
 }
 
-function getTagClass(tag){
-  for(let [cat,tags] of Object.entries(tagCategories)){
-    if(tags.includes(tag)) return cat;
-  }
-  return "";
-}
-
 function render(){
-  let filtered = data.filter(match).sort((a,b)=>b.favorite - a.favorite);
+  let filtered = data.filter(match);
 
   list.innerHTML="";
 
@@ -297,24 +332,13 @@ function render(){
     div.className="card";
 
     div.innerHTML=`
-      <div>
-        <span class="star" onclick="toggleFav(data.find(d=>d.id==${item.id}))">
-          ${item.favorite?"⭐":"☆"}
-        </span>
-        <b>${item.name}</b>
-      </div>
+      <b>${item.name}</b><br>
 
-      <div>
-        ${item.tags.map(t=>`<span class="tag ${getTagClass(t)}">${t}</span>`).join("")}
-      </div>
+      ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
 
       <div>${item.memo||""}</div>
 
       <div>回数: ${item.logs.length}</div>
-
-      <div>
-        ${item.images.map(img=>`<img src="${img}">`).join("")}
-      </div>
 
       <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
         やった！
@@ -325,7 +349,9 @@ function render(){
   });
 }
 
+/* init */
 renderTags();
+renderTagManager();
 render();
 </script>
 
