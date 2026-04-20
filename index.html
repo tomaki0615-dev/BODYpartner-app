@@ -6,13 +6,45 @@
 <title>筋トレ管理アプリ</title>
 
 <style>
-body{font-family:-apple-system;margin:0;background:#f5f5f5;}
-header{background:#222;color:#fff;padding:10px;text-align:center;}
-.tab{display:flex;}
-.tab button{flex:1;padding:10px;border:none;background:#ddd;}
-.tab button.active{background:#222;color:#fff;}
-.container{padding:10px;}
-.card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
+body{
+  font-family:-apple-system;
+  margin:0;
+  background:#f5f5f5;
+}
+
+header{
+  background:#222;
+  color:#fff;
+  padding:10px;
+  text-align:center;
+}
+
+.tab{
+  display:flex;
+}
+
+.tab button{
+  flex:1;
+  padding:10px;
+  border:none;
+  background:#ddd;
+}
+
+.tab button.active{
+  background:#222;
+  color:#fff;
+}
+
+.container{
+  padding:10px;
+}
+
+.card{
+  background:#fff;
+  margin-bottom:10px;
+  padding:10px;
+  border-radius:10px;
+}
 
 .tag{
   display:inline-block;
@@ -20,13 +52,9 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
   margin:2px;
   border-radius:10px;
   font-size:12px;
+  background:#666;
   color:#fff;
 }
-
-.type{background:#007bff;}
-.time{background:#28a745;}
-.freq{background:#ffc107;color:#000;}
-.body{background:#e83e8c;}
 
 .tag-select{
   display:inline-block;
@@ -38,23 +66,41 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
   cursor:pointer;
 }
 
-.tag-select.active{background:#222;color:#fff;}
-
-.small-btn{
-  font-size:12px;
-  margin-left:5px;
+.tag-select.active{
+  background:#222;
+  color:#fff;
 }
 
-button{padding:5px 10px;margin:2px;}
-.big-btn{background:#28a745;color:#fff;border:none;padding:10px;width:100%;border-radius:10px;}
+button{
+  padding:5px 10px;
+  margin:2px;
+}
 
-input,select{padding:5px;margin:2px;}
+.big-btn{
+  background:#28a745;
+  color:#fff;
+  border:none;
+  padding:10px;
+  width:100%;
+  border-radius:10px;
+}
+
+.star{
+  font-size:20px;
+  cursor:pointer;
+}
+
+img{
+  width:80px;
+  margin:5px;
+  border-radius:8px;
+}
 </style>
 </head>
 
 <body>
 
-<header>筋トレ管理アプリ</header>
+<header>筋トレ・ストレッチ管理</header>
 
 <div class="tab">
   <button onclick="switchTab('list')" id="tabList" class="active">検索</button>
@@ -74,9 +120,13 @@ input,select{padding:5px;margin:2px;}
 <!-- 追加 -->
 <div id="addTab" style="display:none">
   <input id="name" placeholder="名前"><br><br>
+
   <div id="addTags"></div>
+
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
+
   <input type="file" id="imageInput" multiple><br><br>
+
   <button onclick="addItem()">追加</button>
 </div>
 
@@ -131,6 +181,9 @@ function save(){
   localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
 }
 
+/* ======================
+   タブ切り替え
+====================== */
 function switchTab(tab){
   listTab.style.display = tab==="list"?"block":"none";
   addTab.style.display = tab==="add"?"block":"none";
@@ -148,7 +201,6 @@ function switchTab(tab){
 /* ======================
    タグ管理
 ====================== */
-
 function addTag(){
   let cat = document.getElementById("newTagCat").value;
   let name = document.getElementById("newTagName").value.trim();
@@ -176,11 +228,9 @@ function editTag(cat, oldTag){
   let newName = prompt("新しいタグ名", oldTag);
   if(!newName) return;
 
-  let listArr = tagCategories[cat];
-  let idx = listArr.indexOf(oldTag);
-  if(idx !== -1){
-    listArr[idx] = newName;
-  }
+  let arr = tagCategories[cat];
+  let idx = arr.indexOf(oldTag);
+  if(idx !== -1) arr[idx] = newName;
 
   save();
   renderTags();
@@ -189,28 +239,24 @@ function editTag(cat, oldTag){
 
 function renderTagManager(){
   let html="";
-
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html += `<h4>${cat}</h4>`;
-
     tags.forEach(tag=>{
       html += `
         <div>
           ${tag}
-          <button class="small-btn" onclick="editTag('${cat}','${tag}')">編集</button>
-          <button class="small-btn" onclick="deleteTag('${cat}','${tag}')">削除</button>
+          <button onclick="editTag('${cat}','${tag}')">編集</button>
+          <button onclick="deleteTag('${cat}','${tag}')">削除</button>
         </div>
       `;
     });
   });
-
   tagList.innerHTML = html;
 }
 
 /* ======================
    タグUI
 ====================== */
-
 function renderTags(){
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
@@ -251,7 +297,6 @@ function toggleAddTag(tag){
 /* ======================
    データ処理
 ====================== */
-
 function addItem(){
   let nameEl = document.getElementById("name");
   let memoEl = document.getElementById("memo");
@@ -293,6 +338,9 @@ function addItem(){
   });
 }
 
+/* ======================
+   ロジック
+====================== */
 function toggleMode(){
   mode = mode==="OR"?"AND":"OR";
   document.getElementById("mode").innerText = mode;
@@ -322,6 +370,9 @@ function toggleFav(item){
   render();
 }
 
+/* ======================
+   描画
+====================== */
 function render(){
   let filtered = data.filter(match);
 
@@ -334,11 +385,17 @@ function render(){
     div.innerHTML=`
       <b>${item.name}</b><br>
 
-      ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+      <div>
+        ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+      </div>
 
       <div>${item.memo||""}</div>
 
       <div>回数: ${item.logs.length}</div>
+
+      <div>
+        ${item.images.map(img=>`<img src="${img}">`).join("")}
+      </div>
 
       <button class="big-btn" onclick="addLog(data.find(d=>d.id==${item.id}))">
         やった！
