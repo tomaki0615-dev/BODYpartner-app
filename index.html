@@ -151,7 +151,15 @@ button{
 <!-- 追加 -->
 <div id="addTab" style="display:none">
   <input id="name" placeholder="名前"><br><br>
+
   <div id="addTags"></div>
+
+  <!-- ★追加：見える化 -->
+  <div style="margin:8px 0;">
+    <b>選択中：</b>
+    <div id="selectedAddTags"></div>
+  </div>
+
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
   <input type="file" id="imageInput" multiple><br><br>
   <button onclick="addItem()">追加</button>
@@ -226,9 +234,10 @@ function switchTab(tab){
 }
 
 //////////////////////
-// 🏷タグ
+// 🏷タグUI
 //////////////////////
 function renderTags(){
+
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html+=`<div>${cat}</div>`;
@@ -252,6 +261,14 @@ function renderTags(){
     });
   });
   addTags.innerHTML=addHtml;
+
+  // ★追加：選択状態見える化
+  if(document.getElementById("selectedAddTags")){
+    selectedAddTags.innerHTML =
+      addSelectedTags.length
+        ? addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("")
+        : "なし";
+  }
 }
 
 function toggleTag(tag){
@@ -263,19 +280,15 @@ function toggleTag(tag){
   render();
 }
 
+//////////////////////
+// ★ここが今回の修正ポイント
+//////////////////////
 function toggleAddTag(tag){
   addSelectedTags = addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
     : [...addSelectedTags,tag];
-}
 
-//////////////////////
-// 🧠フィルタ
-//////////////////////
-function match(item){
-  if(selectedTags.length===0) return true;
-
-  return selectedTags.some(t=>(item.tags||[]).includes(t));
+  renderTags(); // ←これで即反映
 }
 
 //////////////////////
@@ -405,7 +418,7 @@ function openDetail(item){
         if(dx<-50) next();
         if(dx>50) prev();
       }else{
-        if(dy>80) close();
+        if(dy>80) modalOverlay.style.display="none";
       }
     };
   }
@@ -413,12 +426,10 @@ function openDetail(item){
   window.next=()=>{i=(i+1)%item.images.length;draw();}
   window.prev=()=>{i=(i-1+item.images.length)%item.images.length;draw();}
 
-  function close(){
-    modalOverlay.style.display="none";
-  }
-
   modalOverlay.onclick=(e)=>{
-    if(e.target===modalOverlay) close();
+    if(e.target===modalOverlay){
+      modalOverlay.style.display="none";
+    }
   };
 
   draw();
@@ -431,7 +442,7 @@ function openDetail(item){
 function render(){
   list.innerHTML="";
 
-  data.filter(match).forEach(item=>{
+  data.forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
     div.onclick=()=>openDetail(item);
