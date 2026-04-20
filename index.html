@@ -63,6 +63,7 @@ header{
 }
 .tag-select.active{background:#222;color:#fff;}
 
+/* ボタン */
 button{
   padding:5px 10px;
   margin:2px;
@@ -95,41 +96,6 @@ button{
   transition:.3s;
 }
 .toast.show{opacity:1;}
-
-/* ギャラリー */
-.modal-overlay{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.92);
-  display:none;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-}
-.modal{text-align:center;color:#fff;}
-
-#mainImg{
-  width:90vw;
-  max-width:600px;
-  border-radius:10px;
-  touch-action:none;
-}
-#mainImg.zoomed{
-  width:95vw !important;
-  max-width:900px;
-}
-
-.indicator{
-  display:flex;
-  justify-content:center;
-  gap:6px;
-  margin-top:10px;
-}
-.dot{
-  width:8px;height:8px;border-radius:50%;
-  background:#666;
-}
-.dot.active{background:#fff;}
 </style>
 </head>
 
@@ -157,7 +123,10 @@ button{
 
   <div id="addTags"></div>
 
-  <div><b>選択中：</b><div id="selectedAddTags"></div></div>
+  <div>
+    <b>選択中：</b>
+    <div id="selectedAddTags"></div>
+  </div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
   <input type="file" id="imageInput" multiple><br><br>
@@ -185,18 +154,13 @@ button{
 
 </div>
 
-<!-- ギャラリー -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal" id="modalContent"></div>
-</div>
-
 <div id="toast" class="toast">完了</div>
 
 <script>
 
-//////////////////////
-// DOM固定
-//////////////////////
+////////////////////////
+// DOM
+////////////////////////
 const list=document.getElementById("list");
 const filterTags=document.getElementById("filterTags");
 const addTags=document.getElementById("addTags");
@@ -207,12 +171,9 @@ const listTab=document.getElementById("listTab");
 const addTab=document.getElementById("addTab");
 const tagTab=document.getElementById("tagTab");
 
-const modalOverlay=document.getElementById("modalOverlay");
-const modalContent=document.getElementById("modalContent");
-
-//////////////////////
+////////////////////////
 // データ
-//////////////////////
+////////////////////////
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
 let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
@@ -230,9 +191,9 @@ function save(){
   localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-//////////////////////
+////////////////////////
 // タブ
-//////////////////////
+////////////////////////
 function switchTab(tab){
 
   listTab.style.display=tab==="list"?"block":"none";
@@ -248,11 +209,12 @@ function switchTab(tab){
   render();
 }
 
-//////////////////////
-// タグ表示
-//////////////////////
+////////////////////////
+// タグ描画
+////////////////////////
 function renderTags(){
 
+  // 検索側
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html+=`<div>${cat}</div>`;
@@ -265,6 +227,7 @@ function renderTags(){
   });
   filterTags.innerHTML=html;
 
+  // 追加側
   let addHtml="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     addHtml+=`<div>${cat}</div>`;
@@ -277,7 +240,7 @@ function renderTags(){
   });
   addTags.innerHTML=addHtml;
 
-  selectedAddTags.innerHTML =
+  selectedAddTags.innerHTML=
     addSelectedTags.length
       ? addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("")
       : "なし";
@@ -288,7 +251,7 @@ function toggleTag(tag){
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
 
-  render();
+  render();      // ←重要
   renderTags();
 }
 
@@ -300,9 +263,9 @@ function toggleAddTag(tag){
   renderTags();
 }
 
-//////////////////////
+////////////////////////
 // 追加
-//////////////////////
+////////////////////////
 function addItem(){
 
   let name=document.getElementById("name").value.trim();
@@ -347,9 +310,9 @@ function addItem(){
   });
 }
 
-//////////////////////
+////////////////////////
 // タグ管理
-//////////////////////
+////////////////////////
 function addTag(){
   let cat=newTagCat.value;
   let name=newTagName.value.trim();
@@ -357,8 +320,9 @@ function addTag(){
 
   if(!tagCategories[cat].includes(name)){
     tagCategories[cat].push(name);
-    save();
   }
+
+  save();
 
   newTagName.value="";
   renderTags();
@@ -388,9 +352,9 @@ function deleteTag(cat,tag){
   renderTagManager();
 }
 
-//////////////////////
+////////////////////////
 // トースト
-//////////////////////
+////////////////////////
 function toast(msg){
   const t=document.getElementById("toast");
   t.textContent=msg;
@@ -398,84 +362,25 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),1500);
 }
 
-//////////////////////
-// やった
-//////////////////////
-function addLog(id){
-  let item=data.find(d=>d.id===id);
-  if(!item) return;
-
-  let today=new Date().toISOString().split("T")[0];
-
-  if(item.logs.some(l=>l.date===today)){
-    alert("今日は済み");
-    return;
-  }
-
-  item.logs.push({date:today});
-  save();
-  render();
+////////////////////////
+// フィルタ条件
+////////////////////////
+function match(item){
+  if(selectedTags.length===0) return true;
+  return selectedTags.some(t=>item.tags.includes(t));
 }
 
-//////////////////////
-// ギャラリー
-//////////////////////
-function openDetail(item){
-  let i=0;
-
-  function draw(){
-    modalContent.innerHTML=`
-      <img id="mainImg" src="${item.images[i]}">
-      <div>${i+1}/${item.images.length}</div>
-    `;
-
-    const img=document.getElementById("mainImg");
-
-    img.onclick=()=>img.classList.toggle("zoomed");
-
-    let sx=0,sy=0;
-
-    img.ontouchstart=e=>{
-      sx=e.touches[0].clientX;
-      sy=e.touches[0].clientY;
-    };
-
-    img.ontouchend=e=>{
-      let dx=e.changedTouches[0].clientX-sx;
-      let dy=e.changedTouches[0].clientY-sy;
-
-      if(Math.abs(dx)>Math.abs(dy)){
-        if(dx<-50) next();
-        if(dx>50) prev();
-      }else{
-        if(dy>80) modalOverlay.style.display="none";
-      }
-    };
-  }
-
-  window.next=()=>{i=(i+1)%item.images.length;draw();}
-  window.prev=()=>{i=(i-1+item.images.length)%item.images.length;draw();}
-
-  modalOverlay.onclick=e=>{
-    if(e.target===modalOverlay){
-      modalOverlay.style.display="none";
-    }
-  };
-
-  draw();
-  modalOverlay.style.display="flex";
-}
-
-//////////////////////
-// 描画
-//////////////////////
+////////////////////////
+// 描画（検索反映）
+////////////////////////
 function render(){
   list.innerHTML="";
 
-  data.forEach(item=>{
+  let filtered=data.filter(match);
+
+  filtered.forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
-    div.onclick=()=>openDetail(item);
 
     div.innerHTML=`
       <b>${item.name}</b><br>
@@ -487,6 +392,9 @@ function render(){
   });
 }
 
+////////////////////////
+// 初期化
+////////////////////////
 renderTags();
 renderTagManager();
 render();
