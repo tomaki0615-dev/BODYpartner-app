@@ -35,9 +35,7 @@ header{
   color:#fff;
 }
 
-.container{
-  padding:10px;
-}
+.container{padding:10px;}
 
 .card{
   background:#fff;
@@ -85,19 +83,13 @@ button{
   border-radius:10px;
 }
 
-img{
-  width:80px;
-  margin:5px;
-  border-radius:8px;
-}
-
-/* ===== モーダル（画像ギャラリー） ===== */
+/* ===== モーダル ===== */
 .modal-overlay{
   position:fixed;
   top:0;left:0;
   width:100%;
   height:100%;
-  background:rgba(0,0,0,0.85);
+  background:rgba(0,0,0,0.9);
   display:none;
   justify-content:center;
   align-items:center;
@@ -105,23 +97,46 @@ img{
 }
 
 .modal{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:center;
-  gap:10px;
-  padding:10px;
+  width:100%;
+  text-align:center;
+  color:#fff;
 }
 
+/* メイン画像 */
 .modal img{
-  width:120px;
+  width:90vw;
+  max-width:600px;
   border-radius:10px;
-  cursor:pointer;
   transition:0.2s;
+  cursor:zoom-in;
 }
 
 .modal img.zoomed{
-  width:90vw;
-  max-width:600px;
+  width:95vw !important;
+  max-width:900px;
+}
+
+/* インジケーター */
+.indicator{
+  margin-top:10px;
+  display:flex;
+  justify-content:center;
+  gap:6px;
+}
+
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#666;
+}
+
+.dot.active{
+  background:#fff;
+}
+
+.nav{
+  margin-top:10px;
 }
 </style>
 </head>
@@ -138,14 +153,12 @@ img{
 
 <div class="container">
 
-<!-- 検索 -->
 <div id="listTab">
   <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
   <div id="filterTags"></div>
   <div id="list"></div>
 </div>
 
-<!-- 追加 -->
 <div id="addTab" style="display:none">
   <input id="name" placeholder="名前"><br><br>
 
@@ -158,31 +171,26 @@ img{
   <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
+  <h3>タグ管理</h3>
 
-<h3>タグ追加</h3>
+  <select id="newTagCat">
+    <option value="type">type</option>
+    <option value="time">time</option>
+    <option value="freq">freq</option>
+    <option value="body">body</option>
+  </select>
 
-<select id="newTagCat">
-  <option value="type">type</option>
-  <option value="time">time</option>
-  <option value="freq">freq</option>
-  <option value="body">body</option>
-</select>
+  <input id="newTagName" placeholder="タグ名">
+  <button onclick="addTag()">追加</button>
 
-<input id="newTagName" placeholder="タグ名">
-<button onclick="addTag()">追加</button>
-
-<hr>
-
-<h3>タグ一覧</h3>
-<div id="tagList"></div>
-
+  <hr>
+  <div id="tagList"></div>
 </div>
 
 </div>
 
-<!-- モーダル（画像のみ） -->
+<!-- モーダル -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal" id="modalContent"></div>
 </div>
@@ -344,7 +352,6 @@ function addItem(){
       tags:addSelectedTags,
       memo:document.getElementById("memo").value,
       images:results,
-      favorite:false,
       logs:[]
     });
 
@@ -374,28 +381,48 @@ function match(item){
     : selectedTags.some(t=>item.tags.includes(t));
 }
 
-function addLog(item){
-  let today = new Date().toISOString().split('T')[0];
-  if(item.logs.some(l=>l.date===today)) return;
-
-  item.logs.push({date:today});
-  save();
-  render();
-}
-
-/* ===== 詳細（画像のみ） ===== */
+/* ===== カルーセル ===== */
 function openDetail(item){
   let modal = document.getElementById("modalContent");
 
-  modal.innerHTML = item.images.map(img => `
-    <img src="${img}" onclick="toggleZoom(this)">
-  `).join("");
+  let index = 0;
 
+  function render(){
+    modal.innerHTML = `
+      <div>
+        <img id="mainImg" src="${item.images[index]}">
+      </div>
+
+      <div class="nav">
+        <button onclick="prev()">◀</button>
+        <span>${index+1} / ${item.images.length}</span>
+        <button onclick="next()">▶</button>
+      </div>
+
+      <div class="indicator">
+        ${item.images.map((_,i)=>`
+          <div class="dot ${i===index?'active':''}"></div>
+        `).join("")}
+      </div>
+    `;
+
+    document.getElementById("mainImg").onclick = function(){
+      this.classList.toggle("zoomed");
+    };
+  }
+
+  window.next = function(){
+    index = (index + 1) % item.images.length;
+    render();
+  }
+
+  window.prev = function(){
+    index = (index - 1 + item.images.length) % item.images.length;
+    render();
+  }
+
+  render();
   document.getElementById("modalOverlay").style.display="flex";
-}
-
-function toggleZoom(img){
-  img.classList.toggle("zoomed");
 }
 
 function closeModal(e){
@@ -426,15 +453,7 @@ function render(){
 
       <div>${item.memo||""}</div>
 
-      <div>回数: ${item.logs.length}</div>
-
-      <div>
-        ${item.images.map(img=>`<img src="${img}">`).join("")}
-      </div>
-
-      <button class="big-btn" onclick="event.stopPropagation();addLog(data.find(d=>d.id==${item.id}))">
-        やった！
-      </button>
+      <div>枚数: ${item.images.length}</div>
     `;
 
     list.appendChild(div);
