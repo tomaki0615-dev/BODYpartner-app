@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ボディケアアプリ 完全版</title>
+<title>ボディケア管理</title>
 
 <style>
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
@@ -13,16 +13,13 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 .tab .active{background:#222;color:#fff;}
 .container{padding:10px;}
 .card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
-
 .tag{display:inline-block;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;color:#fff;}
 .type{background:#007bff;}
 .time{background:#28a745;}
 .freq{background:#ffc107;color:#000;}
 .body{background:#e83e8c;}
-
 .tag-select{display:inline-block;padding:4px 8px;margin:2px;border-radius:10px;background:#eee;}
 .tag-select.active{background:#222;color:#fff;}
-
 .big-btn{background:#28a745;color:#fff;border:none;padding:10px;width:100%;border-radius:10px;}
 .star{font-size:20px;cursor:pointer;}
 img{width:70px;margin:5px;border-radius:8px;}
@@ -42,14 +39,12 @@ img{width:70px;margin:5px;border-radius:8px;}
 
 <div class="container">
 
-<!-- 検索 -->
 <div id="listTab">
 <button onclick="toggleMode()">検索: <span id="mode">OR</span></button>
 <div id="filterTags"></div>
 <div id="list"></div>
 </div>
 
-<!-- 追加 -->
 <div id="addTab" style="display:none">
 <input id="name" placeholder="名前"><br><br>
 <div id="addTags"></div>
@@ -58,9 +53,8 @@ img{width:70px;margin:5px;border-radius:8px;}
 <button onclick="addItem()">追加</button>
 </div>
 
-<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
-<input id="newTag" placeholder="新タグ">
+<input id="newTag">
 <select id="tagCat">
 <option value="type">種類</option>
 <option value="time">時間</option>
@@ -68,7 +62,6 @@ img{width:70px;margin:5px;border-radius:8px;}
 <option value="body">部位</option>
 </select>
 <button onclick="addTag()">追加</button>
-
 <div id="tagList"></div>
 </div>
 
@@ -95,6 +88,12 @@ function switchTab(tab){
   listTab.style.display=tab==="list"?"block":"none";
   addTab.style.display=tab==="add"?"block":"none";
   tagTab.style.display=tab==="tag"?"block":"none";
+
+  tabList.classList.remove("active");
+  tabAdd.classList.remove("active");
+
+  if(tab==="list") tabList.classList.add("active");
+  if(tab==="add") tabAdd.classList.add("active");
 }
 
 function renderTags(){
@@ -132,11 +131,11 @@ function renderTagManager(){
 }
 
 function addTag(){
-  let t=newTag.value;
-  let c=tagCat.value;
+  let t=document.getElementById("newTag").value;
+  let c=document.getElementById("tagCat").value;
   if(!t)return;
   tagCategories[c].push(t);
-  newTag.value="";
+  document.getElementById("newTag").value="";
   save(); renderTags();
 }
 
@@ -162,7 +161,9 @@ function toggleAddTag(tag){
 function addItem(){
   let name=document.getElementById("name").value;
   let memo=document.getElementById("memo").value;
-  let files=imageInput.files;
+  let files=document.getElementById("imageInput").files;
+
+  if(!name) return;
 
   let promises=[...files].map(file=>new Promise(res=>{
     let r=new FileReader();
@@ -182,15 +183,20 @@ function addItem(){
     });
 
     save();
-    name.value=""; memo.value=""; imageInput.value="";
+
+    document.getElementById("name").value="";
+    document.getElementById("memo").value="";
+    document.getElementById("imageInput").value="";
     addSelectedTags=[];
+
+    switchTab("list");
     render();
   });
 }
 
 function toggleMode(){
   mode=mode==="OR"?"AND":"OR";
-  mode.innerText=mode;
+  document.getElementById("mode").innerText = mode;
   render();
 }
 
@@ -202,8 +208,7 @@ function match(item){
 }
 
 function addLog(item){
-  let d=new Date().toISOString();
-  item.logs.push(d);
+  item.logs.push(new Date().toISOString());
   save(); render();
 }
 
@@ -268,10 +273,8 @@ function render(){
 
       <div>
         ${item.images.map((img,i)=>`
-          <div>
-            <img src="${img}">
-            <button onclick="data.find(d=>d.id==${item.id}).images.splice(${i},1);save();render();">削除</button>
-          </div>
+          <img src="${img}">
+          <button onclick="data.find(d=>d.id==${item.id}).images.splice(${i},1);save();render();">削除</button>
         `).join("")}
       </div>
 
