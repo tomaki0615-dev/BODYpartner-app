@@ -55,7 +55,6 @@ header{
   color:#fff;
 }
 
-/* カテゴリ別カラー */
 .type{background:#007bff;}
 .time{background:#28a745;}
 .freq{background:#ffc107;color:#000;}
@@ -114,7 +113,6 @@ img{
 
 <div class="container">
 
-<!-- 検索 -->
 <div id="listTab">
 
 <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
@@ -124,7 +122,6 @@ img{
 
 </div>
 
-<!-- 追加 -->
 <div id="addTab" style="display:none">
 
 <input id="name" placeholder="名前"><br><br>
@@ -154,6 +151,13 @@ const tagCategories = {
 let selectedTags = [];
 let addSelectedTags = [];
 let mode = "OR";
+
+// DOM
+const listTab = document.getElementById("listTab");
+const addTab = document.getElementById("addTab");
+const filterTags = document.getElementById("filterTags");
+const addTags = document.getElementById("addTags");
+const list = document.getElementById("list");
 
 function save(){
   localStorage.setItem("trainingApp", JSON.stringify(data));
@@ -190,6 +194,7 @@ function toggleTag(tag){
   selectedTags = selectedTags.includes(tag)
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
+
   renderTags();
   render();
 }
@@ -198,16 +203,19 @@ function toggleAddTag(tag){
   addSelectedTags = addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
     : [...addSelectedTags,tag];
+
   renderTags();
 }
 
 function addItem(){
-  let name = document.getElementById("name").value;
+  let nameEl = document.getElementById("name");
+  let memoEl = document.getElementById("memo");
+  let imageEl = document.getElementById("imageInput");
+
+  let name = nameEl.value;
   if(!name) return;
 
-  let files = document.getElementById("imageInput").files;
-  let images=[];
-
+  let files = imageEl.files;
   let promises = [];
 
   for(let file of files){
@@ -220,26 +228,25 @@ function addItem(){
   }
 
   Promise.all(promises).then(results=>{
-    images = results;
-
     data.push({
       id:Date.now(),
       name,
       tags:addSelectedTags,
-      memo:document.getElementById("memo").value,
-      images,
+      memo:memoEl.value,
+      images:results,
       favorite:false,
       logs:[]
     });
 
     save();
 
-    name.value="";
-    memo.value="";
-    imageInput.value="";
+    nameEl.value="";
+    memoEl.value="";
+    imageEl.value="";
     addSelectedTags=[];
 
     switchTab("list");
+    renderTags();
     render();
   });
 }
@@ -260,6 +267,8 @@ function match(item){
 
 function addLog(item){
   let today = new Date().toISOString().split('T')[0];
+  if(item.logs.some(l=>l.date===today)) return;
+
   item.logs.push({date:today});
   save();
   render();
