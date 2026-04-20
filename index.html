@@ -91,7 +91,7 @@ button{
   font-weight:bold;
 }
 
-/* 編集・削除 */
+/* 編集削除 */
 .action-btn{
   background:#f0f0f0;
   color:#444;
@@ -129,8 +129,8 @@ button{
   width:90vw;
   max-width:600px;
   border-radius:10px;
-  transition:0.2s;
   cursor:zoom-in;
+  transition:0.2s;
 }
 
 #mainImg.zoomed{
@@ -247,7 +247,7 @@ function switchTab(tab){
   render();
 }
 
-/* ===== タグ表示 ===== */
+/* ===== タグ表示（安全版） ===== */
 function renderTags(){
   let html="";
 
@@ -264,7 +264,7 @@ function renderTags(){
     });
   });
 
-  filterTags.innerHTML=html;
+  filterTags.innerHTML = html;
 
   let addHtml="";
 
@@ -281,7 +281,7 @@ function renderTags(){
     });
   });
 
-  addTags.innerHTML=addHtml;
+  addTags.innerHTML = addHtml;
 }
 
 /* ===== タグ操作 ===== */
@@ -348,7 +348,7 @@ function addLog(id){
   render();
 }
 
-/* ===== ギャラリー（スワイプ復活版） ===== */
+/* ===== ギャラリー（スワイプ復活完全版） ===== */
 function openDetail(item){
   let i=0;
 
@@ -401,6 +401,12 @@ function openDetail(item){
   modalOverlay.style.display="flex";
 }
 
+function closeModal(e){
+  if(e.target.id==="modalOverlay"){
+    modalOverlay.style.display="none";
+  }
+}
+
 /* ===== 編集・削除 ===== */
 function deleteItem(id){
   if(!confirm("削除する？")) return;
@@ -426,7 +432,7 @@ function editItem(id){
   render();
 }
 
-/* ===== 検索 ===== */
+/* ===== フィルタ ===== */
 function toggleMode(){
   mode=mode==="OR"?"AND":"OR";
   document.getElementById("mode").innerText=mode;
@@ -441,35 +447,36 @@ function match(item){
     : selectedTags.some(t=>item.tags.includes(t));
 }
 
-/* ===== 描画 ===== */
+/* ===== 描画（完全安定版） ===== */
 function render(){
+  if(!list) return;
+
   list.innerHTML="";
 
   data.filter(match).forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
-
     div.onclick=()=>openDetail(item);
 
     div.innerHTML=`
-      <b>${item.name}</b><br>
+      <b>${item.name||""}</b><br>
 
       <div>
-        ${item.tags?.map(t=>`<span class="tag">${t}</span>`).join("")||""}
+        ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
       </div>
 
       <div>${item.memo||""}</div>
 
-      <div>回数: ${item.logs.length}</div>
+      <div>回数: ${(item.logs||[]).length}</div>
 
       <div>最終: ${
-        item.logs.length
+        (item.logs&&item.logs.length)
           ? item.logs[item.logs.length-1].date
           : "-"
       }</div>
 
       <div>
-        ${item.images?.[0]?`<img src="${item.images[0]}">`:""}
+        ${item.images&&item.images[0]?`<img src="${item.images[0]}">`:""}
       </div>
 
       <button class="big-btn"
@@ -489,7 +496,7 @@ function render(){
 
 /* init */
 renderTags();
-renderTagManager();
+renderTagManager?.();
 render();
 </script>
 
