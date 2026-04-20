@@ -41,6 +41,7 @@ header{
   border-radius:10px;
 }
 
+/* タグ */
 .tag{
   display:inline-block;
   padding:4px 8px;
@@ -102,9 +103,7 @@ button{
   width:90vw;
   max-width:600px;
   border-radius:10px;
-  transition:.2s;
   touch-action:none;
-  cursor:zoom-in;
 }
 
 #mainImg.zoomed{
@@ -184,9 +183,9 @@ button{
 
 <script>
 
-//////////////////////////////
+//////////////////////
 // 🧠データ
-//////////////////////////////
+//////////////////////
 let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
 let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || JSON.stringify({
@@ -209,9 +208,9 @@ function save(){
   localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
 }
 
-//////////////////////////////
+//////////////////////
 // 🧭タブ
-//////////////////////////////
+//////////////////////
 function switchTab(tab){
   listTab.style.display = tab==="list"?"block":"none";
   addTab.style.display = tab==="add"?"block":"none";
@@ -226,9 +225,9 @@ function switchTab(tab){
   render();
 }
 
-//////////////////////////////
-// 🏷タグUI
-//////////////////////////////
+//////////////////////
+// 🏷タグ
+//////////////////////
 function renderTags(){
   let html="";
 
@@ -273,20 +272,9 @@ function toggleAddTag(tag){
     : [...addSelectedTags,tag];
 }
 
-//////////////////////////////
-// 🧠重要：フィルタロジック
-//////////////////////////////
-function match(item){
-  if(selectedTags.length===0) return true;
-
-  return mode==="AND"
-    ? selectedTags.every(t=>(item.tags||[]).includes(t))
-    : selectedTags.some(t=>(item.tags||[]).includes(t));
-}
-
-//////////////////////////////
+//////////////////////
 // ➕追加
-//////////////////////////////
+//////////////////////
 function addItem(){
   let name=nameInput.value;
   if(!name) return;
@@ -317,9 +305,9 @@ function addItem(){
   });
 }
 
-//////////////////////////////
+//////////////////////
 // 🧾タグ管理
-//////////////////////////////
+//////////////////////
 function addTag(){
   let cat=newTagCat.value;
   let name=newTagName.value.trim();
@@ -359,9 +347,20 @@ function deleteTag(cat,tag){
   renderTagManager();
 }
 
-//////////////////////////////
+//////////////////////
+// 🧠フィルタ
+//////////////////////
+function match(item){
+  if(selectedTags.length===0) return true;
+
+  return mode==="AND"
+    ? selectedTags.every(t=>(item.tags||[]).includes(t))
+    : selectedTags.some(t=>(item.tags||[]).includes(t));
+}
+
+//////////////////////
 // 📸ギャラリー
-//////////////////////////////
+//////////////////////
 function openDetail(item){
   let i=0;
 
@@ -413,9 +412,9 @@ function openDetail(item){
   modalOverlay.style.display="flex";
 }
 
-//////////////////////////////
-// 🧾描画（ここが修正の核心）
-//////////////////////////////
+//////////////////////
+// 🧾描画（編集削除復活）
+//////////////////////
 function render(){
   list.innerHTML="";
 
@@ -431,18 +430,49 @@ function render(){
 
       <div>${item.memo||""}</div>
 
-      <div>回数:${item.logs.length}</div>
+      <div>回数:${item.logs?.length||0}</div>
 
       <div>${item.images?.[0]?`<img src="${item.images[0]}" width="60">`:""}</div>
+
+      <button onclick="event.stopPropagation(); editItem(${item.id})">編集</button>
+      <button onclick="event.stopPropagation(); deleteItem(${item.id})">削除</button>
     `;
 
     list.appendChild(div);
   });
 }
 
-//////////////////////////////
+//////////////////////
+// ✏️編集削除
+//////////////////////
+function editItem(id){
+  let item=data.find(d=>d.id===id);
+  if(!item) return;
+
+  let n=prompt("名前",item.name);
+  if(n===null) return;
+
+  let m=prompt("メモ",item.memo||"");
+  if(m===null) return;
+
+  item.name=n;
+  item.memo=m;
+
+  save();
+  render();
+}
+
+function deleteItem(id){
+  if(!confirm("削除する？")) return;
+
+  data=data.filter(d=>d.id!==id);
+  save();
+  render();
+}
+
+//////////////////////
 // 🚀初期化
-//////////////////////////////
+//////////////////////
 renderTags();
 renderTagManager();
 render();
