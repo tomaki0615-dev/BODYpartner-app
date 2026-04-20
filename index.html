@@ -92,7 +92,7 @@ button{
   margin-top:5px;
 }
 
-/* モーダル */
+/* モーダル（ギャラリー） */
 .modal-overlay{
   position:fixed;
   top:0;left:0;
@@ -121,6 +121,7 @@ button{
 
 #mainImg.zoomed{
   width:95vw !important;
+  max-width:900px;
 }
 
 /* インジケーター */
@@ -156,12 +157,14 @@ button{
 
 <div class="container">
 
+<!-- 検索 -->
 <div id="listTab">
   <button onclick="toggleMode()">検索モード: <span id="mode">OR</span></button>
   <div id="filterTags"></div>
   <div id="list"></div>
 </div>
 
+<!-- 追加 -->
 <div id="addTab" style="display:none">
   <input id="name" placeholder="名前"><br><br>
   <div id="addTags"></div>
@@ -170,6 +173,7 @@ button{
   <button onclick="addItem()">追加</button>
 </div>
 
+<!-- タグ管理 -->
 <div id="tagTab" style="display:none">
   <h3>タグ管理</h3>
 
@@ -189,7 +193,7 @@ button{
 
 </div>
 
-<!-- モーダル -->
+<!-- ギャラリーモーダル -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal" id="modalContent"></div>
 </div>
@@ -236,7 +240,7 @@ function switchTab(tab){
   render();
 }
 
-/* ===== タグ省略（前と同じ） ===== */
+/* ===== タグ管理（省略なし） ===== */
 function addTag(){
   let cat = newTagCat.value;
   let name = newTagName.value.trim();
@@ -358,16 +362,15 @@ function addItem(){
   });
 }
 
-/* ===== ★同日1回制限付きログ ===== */
+/* ===== ★同日1回制限ログ ===== */
 function addLog(id){
   let item = data.find(d=>d.id==id);
   if(!item) return;
 
   let today = new Date().toISOString().split('T')[0];
 
-  // 同日チェック
   if(item.logs.some(l=>l.date===today)){
-    alert("今日はすでに記録済みだよ");
+    alert("今日はもう記録済みだよ");
     return;
   }
 
@@ -391,7 +394,7 @@ function match(item){
     : selectedTags.some(t=>item.tags.includes(t));
 }
 
-/* ===== ギャラリー ===== */
+/* ===== ギャラリー（画像専用） ===== */
 function openDetail(item){
   let modal = modalContent;
 
@@ -414,13 +417,6 @@ function openDetail(item){
         ${item.images.map((_,i)=>`
           <div class="dot ${i===index?'active':''}"></div>
         `).join("")}
-      </div>
-
-      <div style="margin-top:10px;">
-        <button class="big-btn"
-          onclick="addLog(${item.id})">
-          やった！
-        </button>
       </div>
     `;
 
@@ -494,6 +490,11 @@ function render(){
       <div>
         ${item.images[0] ? `<img src="${item.images[0]}">` : ""}
       </div>
+
+      <button class="big-btn"
+        onclick="event.stopPropagation(); addLog(${item.id})">
+        やった！
+      </button>
     `;
 
     list.appendChild(div);
