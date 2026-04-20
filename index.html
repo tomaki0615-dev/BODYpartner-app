@@ -19,18 +19,6 @@ header{
   text-align:center;
 }
 
-.tab{display:flex;}
-.tab button{
-  flex:1;
-  padding:10px;
-  border:none;
-  background:#ddd;
-}
-.tab button.active{
-  background:#222;
-  color:#fff;
-}
-
 .container{padding:10px;}
 
 .card{
@@ -68,7 +56,7 @@ button{
   border-radius:10px;
 }
 
-/* ===== モーダル ===== */
+/* ギャラリー */
 .modal-overlay{
   position:fixed;
   inset:0;
@@ -79,19 +67,14 @@ button{
   z-index:999;
 }
 
-.modal{
-  text-align:center;
-  color:#fff;
-  width:100%;
-}
+.modal{color:#fff;text-align:center;}
 
 #mainImg{
   width:90vw;
   max-width:600px;
   border-radius:10px;
-  transition:0.2s;
-  touch-action:none; /* 超重要 */
-  cursor:grab;
+  touch-action:none;
+  cursor:zoom-in;
 }
 
 #mainImg.zoomed{
@@ -131,28 +114,30 @@ button{
 </div>
 
 <script>
-let data = [
-  {
-    id:1,
-    name:"サンプル",
-    tags:["筋トレ"],
-    memo:"テスト",
-    images:[
-      "https://picsum.photos/400/300",
-      "https://picsum.photos/401/300",
-      "https://picsum.photos/402/300"
-    ],
-    logs:[]
-  }
-];
+
+/////////////////////////////
+// ✅① 正しいデータ取得
+/////////////////////////////
+let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
+
+function save(){
+  localStorage.setItem("trainingApp", JSON.stringify(data));
+}
 
 const list = document.getElementById("list");
 const modalOverlay = document.getElementById("modalOverlay");
 const modalContent = document.getElementById("modalContent");
 
-/* ===== カード表示 ===== */
+/////////////////////////////
+// 🧠カード描画
+/////////////////////////////
 function render(){
   list.innerHTML="";
+
+  if(data.length === 0){
+    list.innerHTML = "<p>データがありません</p>";
+    return;
+  }
 
   data.forEach(item=>{
     let div=document.createElement("div");
@@ -160,7 +145,12 @@ function render(){
 
     div.innerHTML=`
       <b>${item.name}</b><br>
+
       ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
+
+      <div>${item.memo||""}</div>
+
+      <div>回数: ${item.logs?.length||0}</div>
 
       <div>
         ${item.images?.[0]?`<img src="${item.images[0]}" width="60">`:""}
@@ -175,15 +165,14 @@ function render(){
   });
 }
 
-/* ===== ギャラリー ===== */
+/////////////////////////////
+// 📸ギャラリー
+/////////////////////////////
 function openGallery(id){
   const item = data.find(d=>d.id===id);
-  let i = 0;
+  if(!item || !item.images || item.images.length===0) return;
 
-  let startX = 0;
-  let startY = 0;
-  let deltaX = 0;
-  let deltaY = 0;
+  let i = 0;
 
   function draw(){
     modalContent.innerHTML=`
@@ -204,65 +193,62 @@ function openGallery(id){
 
     const img = document.getElementById("mainImg");
 
-    // ズーム
     img.onclick = ()=>img.classList.toggle("zoomed");
 
-    /* ===== スワイプ制御 ===== */
-    img.addEventListener("touchstart",(e)=>{
-      const t=e.touches[0];
-      startX=t.clientX;
-      startY=t.clientY;
-    });
+    let sx=0, sy=0;
 
-    img.addEventListener("touchmove",(e)=>{
-      const t=e.touches[0];
-      deltaX = t.clientX - startX;
-      deltaY = t.clientY - startY;
-    });
+    img.ontouchstart = e=>{
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+    };
 
-    img.addEventListener("touchend",()=>{
-      // 横スワイプ
-      if(Math.abs(deltaX) > Math.abs(deltaY)){
-        if(deltaX < -50) next();
-        if(deltaX > 50) prev();
+    img.ontouchend = e=>{
+      let ex = e.changedTouches[0].clientX;
+      let ey = e.changedTouches[0].clientY;
+
+      let dx = ex - sx;
+      let dy = ey - sy;
+
+      if(Math.abs(dx) > Math.abs(dy)){
+        if(dx < -50) next();
+        if(dx > 50) prev();
+      }else{
+        // 下スワイプで閉じる
+        if(dy > 80){
+          close();
+        }
       }
-
-      // 🔥下スワイプで閉じる
-      if(deltaY > 80){
-        closeGallery();
-      }
-
-      deltaX=0;
-      deltaY=0;
-    });
+    };
   }
 
-  window.next=()=>{
+  window.next = ()=>{
     i = (i+1)%item.images.length;
     draw();
   };
 
-  window.prev=()=>{
+  window.prev = ()=>{
     i = (i-1+item.images.length)%item.images.length;
     draw();
   };
 
-  function closeGallery(){
+  function close(){
     modalOverlay.style.display="none";
     modalContent.innerHTML="";
   }
 
-  modalOverlay.onclick=(e)=>{
-    if(e.target===modalOverlay){
-      closeGallery();
-    }
+  modalOverlay.onclick = (e)=>{
+    if(e.target === modalOverlay) close();
   };
 
   draw();
   modalOverlay.style.display="flex";
 }
 
+/////////////////////////////
+// 🚀初期描画
+/////////////////////////////
 render();
+
 </script>
 
 </body>
