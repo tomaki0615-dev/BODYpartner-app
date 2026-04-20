@@ -423,22 +423,41 @@ function openDetail(item){
   let i=0;
 
   function render(){
-    modalContent.innerHTML=`
-      <img id="mainImg" src="${item.images[i]}">
+  modalContent.innerHTML=`
+    <img id="mainImg" src="${item.images[i]}">
 
-      <div>
-        <button onclick="prev()">◀</button>
-        <span>${i+1}/${item.images.length}</span>
-        <button onclick="next()">▶</button>
-      </div>
+    <div>
+      <button onclick="prev()">◀</button>
+      <span>${i+1}/${item.images.length}</span>
+      <button onclick="next()">▶</button>
+    </div>
 
-      <div class="indicator">
-        ${item.images.map((_,k)=>`
-          <div class="dot ${k===i?'active':''}"></div>
-        `).join("")}
-      </div>
-    `;
-  }
+    <div class="indicator">
+      ${item.images.map((_,k)=>`
+        <div class="dot ${k===i?'active':''}"></div>
+      `).join("")}
+    </div>
+  `;
+
+  const img=document.getElementById("mainImg");
+
+  // 🔥ズーム
+  img.onclick=()=>img.classList.toggle("zoomed");
+
+  // 🔥スワイプ復活
+  let startX=0;
+
+  img.ontouchstart=(e)=>{
+    startX=e.touches[0].clientX;
+  };
+
+  img.ontouchend=(e)=>{
+    let endX=e.changedTouches[0].clientX;
+
+    if(startX-endX>50) next();      // 左スワイプ → 次
+    if(endX-startX>50) prev();      // 右スワイプ → 前
+  };
+}  
 
   window.next=()=>{
     i=(i+1)%item.images.length;
