@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>身体整えアプリ</title>
+<title>ボディケア管理</title>
 
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
@@ -41,7 +41,6 @@ header{
   box-shadow:0 1px 3px rgba(0,0,0,0.15);
 }
 
-/* コンテンツ */
 .container{padding:10px;}
 
 .card{
@@ -91,7 +90,7 @@ button{
   border-radius:10px;
 }
 
-/* 画像 */
+/* サムネ */
 .thumb{
   width:60px;
   height:60px;
@@ -123,7 +122,7 @@ button{
   transform:translateX(-50%);
   background:#222;
   color:#fff;
-  padding:10px;
+  padding:10px 16px;
   border-radius:20px;
   display:none;
 }
@@ -132,7 +131,7 @@ button{
 
 <body>
 
-<header>身体整え管理</header>
+<header>ボディケア管理</header>
 
 <div class="tab">
   <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
@@ -145,7 +144,8 @@ button{
 <!-- 検索 -->
 <div id="listTab">
 
-<button onclick="toggleMode()">検索モード：<span id="mode">OR</span></button>
+<button onclick="toggleMode()">検索：<span id="mode">OR</span></button>
+<button onclick="toggleFavFilter()">★お気に入りのみ</button>
 
 <div id="filterTags"></div>
 <div id="list"></div>
@@ -155,24 +155,31 @@ button{
 <!-- 追加 -->
 <div id="addTab" style="display:none">
 <input id="name" placeholder="名前"><br><br>
+
 <div id="addTags"></div>
 <div id="selectedAddTags"></div>
-<textarea id="memo"></textarea><br><br>
+
+<textarea id="memo" placeholder="メモ"></textarea><br><br>
+
 <input type="file" id="imageInput" multiple><br><br>
+
 <button onclick="addItem()">追加</button>
 </div>
 
 <!-- タグ管理 -->
 <div id="tagTab" style="display:none">
 <h3>タグ管理</h3>
+
 <select id="newTagCat">
 <option value="type">type</option>
 <option value="time">time</option>
 <option value="freq">freq</option>
 <option value="body">body</option>
 </select>
+
 <input id="newTagName">
 <button onclick="addTag()">追加</button>
+
 <hr>
 <div id="tagList"></div>
 </div>
@@ -201,12 +208,14 @@ body:["上半身","下半身","体幹","顔"]
 let selectedTags=[];
 let addSelectedTags=[];
 let mode="OR";
+let showFavOnly=false;
 
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
 localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
+/* タブ */
 function switchTab(tab){
 listTab.style.display=tab==="list"?"block":"none";
 addTab.style.display=tab==="add"?"block":"none";
@@ -221,12 +230,27 @@ renderTags();
 renderTagManager();
 }
 
+/* モード */
 function toggleMode(){
 mode=mode==="OR"?"AND":"OR";
 document.getElementById("mode").innerText=mode;
 render();
 }
 
+/* お気に入り */
+function toggleFav(id){
+let item=data.find(d=>d.id==id);
+item.favorite=!item.favorite;
+save();
+render();
+}
+
+function toggleFavFilter(){
+showFavOnly=!showFavOnly;
+render();
+}
+
+/* タグ */
 function renderTags(){
 
 let html="";
@@ -267,46 +291,7 @@ addSelectedTags=addSelectedTags.includes(tag)
 renderTags();
 }
 
-function addItem(){
-
-let name=document.getElementById("name").value.trim();
-if(!name)return;
-
-let memo=document.getElementById("memo").value;
-let files=imageInput.files;
-
-let ps=[];
-for(let f of files){
-ps.push(new Promise(r=>{
-let fr=new FileReader();
-fr.onload=()=>r(fr.result);
-fr.readAsDataURL(f);
-}));
-}
-
-Promise.all(ps).then(imgs=>{
-data.push({
-id:Date.now(),
-name,
-tags:addSelectedTags,
-memo,
-images:imgs,
-logs:[]
-});
-
-save();
-
-name.value="";
-memo.value="";
-imageInput.value="";
-addSelectedTags=[];
-
-toast("追加しました");
-
-switchTab("list");
-});
-}
-
+/* タグ管理 */
 function addTag(){
 let cat=newTagCat.value;
 let name=newTagName.value.trim();
@@ -358,50 +343,48 @@ renderTags();
 renderTagManager();
 }
 
-function match(item){
-if(selectedTags.length===0)return true;
+/* 追加 */
+function addItem(){
+let name=document.getElementById("name").value.trim();
+if(!name)return;
 
-return mode==="AND"
-?selectedTags.every(t=>item.tags.includes(t))
-:selectedTags.some(t=>item.tags.includes(t));
+let memo=document.getElementById("memo").value;
+let files=imageInput.files;
+
+let ps=[];
+for(let f of files){
+ps.push(new Promise(r=>{
+let fr=new FileReader();
+fr.onload=()=>r(fr.result);
+fr.readAsDataURL(f);
+}));
 }
 
-function render(){
+Promise.all(ps).then(imgs=>{
+data.push({
+id:Date.now(),
+name,
+tags:addSelectedTags,
+memo,
+images:imgs,
+logs:[],
+favorite:false
+});
 
-list.innerHTML="";
+save();
 
-data.filter(match).forEach(item=>{
+document.getElementById("name").value="";
+document.getElementById("memo").value="";
+imageInput.value="";
+addSelectedTags=[];
 
-let div=document.createElement("div");
-div.className="card";
+toast("追加しました");
 
-div.innerHTML=`
-<b>${item.name}</b><br>
-
-${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
-
-<div>${item.memo||""}</div>
-
-<div>回数：${item.logs.length}</div>
-
-<div>最終：${item.logs.length?item.logs[item.logs.length-1].date:"-"}</div>
-
-<div>
-${item.images.map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`).join("")}
-</div>
-
-<button class="big-btn" onclick="addLog(${item.id})">やった！</button>
-
-<div>
-<button onclick="editItem(${item.id})">編集</button>
-<button onclick="deleteItem(${item.id})">削除</button>
-</div>
-`;
-
-list.appendChild(div);
+switchTab("list");
 });
 }
 
+/* ログ */
 function addLog(id){
 let item=data.find(d=>d.id==id);
 let today=new Date().toISOString().split("T")[0];
@@ -416,6 +399,7 @@ save();
 render();
 }
 
+/* 削除 */
 function deleteItem(id){
 let item=data.find(d=>d.id==id);
 if(!confirm(`「${item.name}」削除？`))return;
@@ -426,6 +410,7 @@ render();
 toast("削除しました");
 }
 
+/* 編集 */
 function editItem(id){
 let item=data.find(d=>d.id==id);
 let n=prompt("名前",item.name);
@@ -434,6 +419,68 @@ save();
 render();
 }
 
+/* フィルタ */
+function match(item){
+
+if(showFavOnly && !item.favorite) return false;
+
+if(selectedTags.length===0) return true;
+
+return mode==="AND"
+?selectedTags.every(t=>item.tags.includes(t))
+:selectedTags.some(t=>item.tags.includes(t));
+}
+
+/* 描画 */
+function render(){
+
+list.innerHTML="";
+
+data
+.filter(match)
+.sort((a,b)=>(b.favorite||false)-(a.favorite||false))
+.forEach(item=>{
+
+let div=document.createElement("div");
+div.className="card";
+
+div.innerHTML=`
+<div style="display:flex;justify-content:space-between;">
+<b>${item.name}</b>
+<span onclick="toggleFav(${item.id})">
+${item.favorite?"⭐":"☆"}
+</span>
+</div>
+
+${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
+
+<div>${item.memo||""}</div>
+
+<div>回数：${item.logs.length}</div>
+
+<div>最終：${item.logs.length?item.logs[item.logs.length-1].date:"-"}</div>
+
+<div>
+${item.images.map(img=>`
+<img class="thumb" src="${img}" onclick="openGallery(${item.id})">
+`).join("")}
+</div>
+
+<button class="big-btn" onclick="addLog(${item.id})">
+やった！
+</button>
+
+<div>
+<button onclick="editItem(${item.id})">編集</button>
+<button onclick="deleteItem(${item.id})">削除</button>
+</div>
+`;
+
+list.appendChild(div);
+});
+}
+
+/* ギャラリー */
 let g=[],i=0;
 
 function openGallery(id){
@@ -448,6 +495,7 @@ function closeModal(){
 modal.style.display="none";
 }
 
+/* トースト */
 function toast(msg){
 let t=document.getElementById("toast");
 t.textContent=msg;
@@ -455,6 +503,7 @@ t.style.display="block";
 setTimeout(()=>t.style.display="none",1500);
 }
 
+/* 初期 */
 render();
 renderTags();
 renderTagManager();
