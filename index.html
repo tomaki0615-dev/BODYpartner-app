@@ -8,8 +8,6 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 
-<link rel="manifest" href="manifest.json">
-
 <style>
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
 
@@ -149,26 +147,21 @@ button{
 
 <!-- 追加 -->
 <div id="addTab" style="display:none">
-
   <input id="name" placeholder="名前"><br><br>
 
   <div id="addTags"></div>
-
-  <div>
-    選択中：
-    <span id="selectedAddTags"></span>
-  </div>
+  <div id="selectedAddTags"></div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
 
   <input type="file" id="imageInput" multiple><br><br>
 
   <button onclick="addItem()">追加</button>
-
 </div>
 
 <!-- タグ管理 -->
 <div id="tagTab" style="display:none">
+  <h3>タグ管理</h3>
 
   <select id="newTagCat">
     <option value="type">type</option>
@@ -182,7 +175,6 @@ button{
 
   <hr>
   <div id="tagList"></div>
-
 </div>
 
 </div>
@@ -201,34 +193,34 @@ button{
 
 <script>
 
-////////////////////
+////////////////////////
 // データ
-////////////////////
-let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
+////////////////////////
+let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
 
-let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
+let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || JSON.stringify({
   type:["筋トレ","ストレッチ","マッサージ"],
   time:["朝","昼","夜"],
   freq:["毎日","週3","月水金"],
   body:["上半身","下半身","体幹","顔"]
 }));
 
-let selectedTags=[];
-let addSelectedTags=[];
+let selectedTags = [];
+let addSelectedTags = [];
 
 function save(){
-  localStorage.setItem("trainingApp",JSON.stringify(data));
-  localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
+  localStorage.setItem("trainingApp", JSON.stringify(data));
+  localStorage.setItem("tagCategories", JSON.stringify(tagCategories));
 }
 
-////////////////////
-// タブ切替（完全復活）
-////////////////////
+////////////////////////
+// タブ切替
+////////////////////////
 function switchTab(tab){
 
-  listTab.style.display=tab==="list"?"block":"none";
-  addTab.style.display=tab==="add"?"block":"none";
-  tagTab.style.display=tab==="tag"?"block":"none";
+  listTab.style.display = tab==="list"?"block":"none";
+  addTab.style.display = tab==="add"?"block":"none";
+  tagTab.style.display = tab==="tag"?"block":"none";
 
   tabList.classList.toggle("active",tab==="list");
   tabAdd.classList.toggle("active",tab==="add");
@@ -239,16 +231,14 @@ function switchTab(tab){
   renderTagManager();
 }
 
-////////////////////
-// タグ表示（復活）
-////////////////////
+////////////////////////
+// タグ
+////////////////////////
 function renderTags(){
 
   let html="";
-
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<div>${cat}</div>`;
-
+  Object.entries(tagCategories).forEach(([c,tags])=>{
+    html+=`<div>${c}</div>`;
     tags.forEach(tag=>{
       html+=`
         <span class="tag-select ${selectedTags.includes(tag)?"active":""}"
@@ -256,14 +246,11 @@ function renderTags(){
       `;
     });
   });
-
   filterTags.innerHTML=html;
 
   let addHtml="";
-
-  Object.entries(tagCategories).forEach(([cat,tags])=>{
-    addHtml+=`<div>${cat}</div>`;
-
+  Object.entries(tagCategories).forEach(([c,tags])=>{
+    addHtml+=`<div>${c}</div>`;
     tags.forEach(tag=>{
       addHtml+=`
         <span class="tag-select ${addSelectedTags.includes(tag)?"active":""}"
@@ -271,15 +258,14 @@ function renderTags(){
       `;
     });
   });
-
   addTags.innerHTML=addHtml;
 
-  selectedAddTags.innerHTML=
+  selectedAddTags.innerHTML =
     addSelectedTags.map(t=>`<span class="tag">${t}</span>`).join("");
 }
 
 function toggleTag(tag){
-  selectedTags=selectedTags.includes(tag)
+  selectedTags = selectedTags.includes(tag)
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
 
@@ -288,29 +274,30 @@ function toggleTag(tag){
 }
 
 function toggleAddTag(tag){
-  addSelectedTags=addSelectedTags.includes(tag)
+  addSelectedTags = addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
     : [...addSelectedTags,tag];
 
   renderTags();
 }
 
-////////////////////
-// 追加（復活）
-////////////////////
+////////////////////////
+// 追加
+////////////////////////
 function addItem(){
 
-  let name=document.getElementById("name").value.trim();
-  let memo=document.getElementById("memo").value;
-  let files=imageInput.files;
+  let name = document.getElementById("name").value.trim();
+  let memo = document.getElementById("memo").value;
+  let files = imageInput.files;
 
   if(!name) return;
 
-  let ps=[];
+  let ps = [];
+
   for(let f of files){
     ps.push(new Promise(r=>{
-      let fr=new FileReader();
-      fr.onload=()=>r(fr.result);
+      let fr = new FileReader();
+      fr.onload = ()=>r(fr.result);
       fr.readAsDataURL(f);
     }));
   }
@@ -318,20 +305,20 @@ function addItem(){
   Promise.all(ps).then(imgs=>{
 
     data.push({
-      id:Date.now(),
+      id: Date.now(),
       name,
-      tags:addSelectedTags,
+      tags: addSelectedTags,
       memo,
-      images:imgs,
-      logs:[]
+      images: imgs,
+      logs: []
     });
 
     save();
 
-    name.value="";
-    memo.value="";
-    imageInput.value="";
-    addSelectedTags=[];
+    document.getElementById("name").value = "";
+    document.getElementById("memo").value = "";
+    document.getElementById("imageInput").value = "";
+    addSelectedTags = [];
 
     toast("追加しました");
 
@@ -340,13 +327,12 @@ function addItem(){
   });
 }
 
-////////////////////
-// タグ管理（編集削除復活）
-////////////////////
+////////////////////////
+// タグ管理
+////////////////////////
 function addTag(){
-
-  let cat=newTagCat.value;
-  let name=newTagName.value.trim();
+  let cat = newTagCat.value;
+  let name = newTagName.value.trim();
 
   if(!name) return;
 
@@ -355,20 +341,20 @@ function addTag(){
   }
 
   save();
-  newTagName.value="";
+  newTagName.value = "";
   renderTags();
   renderTagManager();
 }
 
 function renderTagManager(){
 
-  let html="";
+  let html = "";
 
   Object.entries(tagCategories).forEach(([cat,tags])=>{
-    html+=`<h4>${cat}</h4>`;
+    html += `<h4>${cat}</h4>`;
 
     tags.forEach(tag=>{
-      html+=`
+      html += `
         <div>
           ${tag}
           <button onclick="editTag('${cat}','${tag}')">編集</button>
@@ -378,15 +364,15 @@ function renderTagManager(){
     });
   });
 
-  tagList.innerHTML=html;
+  tagList.innerHTML = html;
 }
 
 function editTag(cat,old){
-  let n=prompt("編集",old);
+  let n = prompt("編集", old);
   if(!n) return;
 
-  let arr=tagCategories[cat];
-  arr[arr.indexOf(old)]=n;
+  let arr = tagCategories[cat];
+  arr[arr.indexOf(old)] = n;
 
   save();
   renderTags();
@@ -394,25 +380,93 @@ function editTag(cat,old){
 }
 
 function deleteTag(cat,tag){
-  tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
+  tagCategories[cat] = tagCategories[cat].filter(t=>t!==tag);
   save();
   renderTags();
   renderTagManager();
 }
 
-////////////////////
-// 描画（カード復活）
-////////////////////
+////////////////////////
+// ギャラリー
+////////////////////////
+let g=[],i=0;
+
+function openGallery(id){
+  let item = data.find(d=>d.id==id);
+  g = item.images;
+  i = 0;
+  modal.style.display = "flex";
+  mainImg.src = g[i];
+}
+
+function next(){
+  i = (i+1)%g.length;
+  mainImg.src = g[i];
+}
+
+function prev(){
+  i = (i-1+g.length)%g.length;
+  mainImg.src = g[i];
+}
+
+function closeModal(){
+  modal.style.display = "none";
+}
+
+////////////////////////
+// 削除（確認付き）
+////////////////////////
+function deleteItem(id){
+
+  let item = data.find(d=>d.id==id);
+  if(!item) return;
+
+  if(!confirm(`「${item.name}」を削除しますか？`)) return;
+
+  data = data.filter(d=>d.id!=id);
+  save();
+  render();
+
+  toast("削除しました");
+}
+
+////////////////////////
+// 編集
+////////////////////////
+function editItem(id){
+  let item = data.find(d=>d.id==id);
+  item.name = prompt("名前", item.name) || item.name;
+  save();
+  render();
+}
+
+////////////////////////
+// やった
+////////////////////////
+function addLog(id){
+  let item = data.find(d=>d.id==id);
+  let today = new Date().toISOString().split("T")[0];
+
+  if(item.logs.some(l=>l.date===today)) return;
+
+  item.logs.push({date:today});
+  save();
+  render();
+}
+
+////////////////////////
+// 描画
+////////////////////////
 function render(){
 
-  list.innerHTML="";
+  list.innerHTML = "";
 
   data.forEach(item=>{
 
-    let div=document.createElement("div");
-    div.className="card";
+    let div = document.createElement("div");
+    div.className = "card";
 
-    div.innerHTML=`
+    div.innerHTML = `
       <b>${item.name}</b><br>
 
       ${(item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("")}
@@ -435,8 +489,7 @@ function render(){
         ).join("")}
       </div>
 
-      <button class="big-btn"
-        onclick="addLog(${item.id})">
+      <button class="big-btn" onclick="addLog(${item.id})">
         やった！
       </button>
 
@@ -450,84 +503,19 @@ function render(){
   });
 }
 
-////////////////////
-// やった
-////////////////////
-function addLog(id){
-  let item=data.find(d=>d.id==id);
-  let today=new Date().toISOString().split("T")[0];
-
-  if(item.logs.some(l=>l.date===today)) return;
-
-  item.logs.push({date:today});
-  save();
-  render();
-}
-
-////////////////////
-// ギャラリー
-////////////////////
-let g=[],i=0;
-
-function openGallery(id){
-  let item=data.find(d=>d.id==id);
-  g=item.images;
-  i=0;
-  modal.style.display="flex";
-  mainImg.src=g[i];
-}
-
-function next(){
-  i=(i+1)%g.length;
-  mainImg.src=g[i];
-}
-
-function prev(){
-  i=(i-1+g.length)%g.length;
-  mainImg.src=g[i];
-}
-
-function closeModal(){
-  modal.style.display="none";
-}
-
-////////////////////
-// 編集削除
-////////////////////
-
-function deleteItem(id){
-
-  let item = data.find(d => d.id == id);
-  if(!item) return;
-
-  let ok = confirm(`「${item.name}」を削除しますか？`);
-
-  if(!ok) return;
-
-  data = data.filter(d => d.id != id);
-  save();
-  render();
-
-  toast("削除しました");
-}function deleteItem(id){
-  data=data.filter(d=>d.id!=id);
-  save();
-  render();
-}
-
-////////////////////
+////////////////////////
 // トースト
-////////////////////
+////////////////////////
 function toast(msg){
-  let t=document.getElementById("toast");
-  t.textContent=msg;
-  t.style.display="block";
+  let t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.display = "block";
   setTimeout(()=>t.style.display="none",1500);
 }
 
-////////////////////
+////////////////////////
 // 初期
-////////////////////
+////////////////////////
 render();
 renderTags();
 renderTagManager();
