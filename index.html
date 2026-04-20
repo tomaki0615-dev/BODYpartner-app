@@ -100,40 +100,33 @@ body:["上半身","下半身","体幹","顔"]
 let selectedTags=[],addSelectedTags=[];
 let mode="OR",showFavOnly=false;
 
-// 保存
+/* 保存 */
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
 localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-// 圧縮
+/* 画像圧縮 */
 function compressImage(file){
 return new Promise(res=>{
 let img=new Image();
 let reader=new FileReader();
-
 reader.onload=e=>img.src=e.target.result;
-
 img.onload=()=>{
 let canvas=document.createElement("canvas");
 let ctx=canvas.getContext("2d");
-
 let max=800;
 let scale=img.width>max?max/img.width:1;
-
 canvas.width=img.width*scale;
 canvas.height=img.height*scale;
-
 ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
 res(canvas.toDataURL("image/jpeg",0.7));
 };
-
 reader.readAsDataURL(file);
 });
 }
 
-// タブ
+/* タブ */
 function switchTab(tab){
 listTab.style.display=tab==="list"?"block":"none";
 addTab.style.display=tab==="add"?"block":"none";
@@ -148,26 +141,25 @@ renderTags();
 renderTagManager();
 }
 
-// 検索
+/* 検索 */
 function toggleMode(){
 mode=mode==="OR"?"AND":"OR";
 document.getElementById("mode").innerText=mode;
 render();
 }
 
-// お気に入り
+/* お気に入り */
 function toggleFav(id){
 let item=data.find(d=>d.id==id);
 item.favorite=!item.favorite;
-save();
-render();
+save();render();
 }
 function toggleFavFilter(){
 showFavOnly=!showFavOnly;
 render();
 }
 
-// タグUI
+/* タグUI */
 function renderTags(){
 let html="";
 Object.entries(tagCategories).forEach(([c,tags])=>{
@@ -199,7 +191,7 @@ addSelectedTags=addSelectedTags.includes(tag)?addSelectedTags.filter(t=>t!==tag)
 renderTags();
 }
 
-// タグ管理
+/* タグ管理 */
 function renderTagManager(){
 let html="";
 Object.entries(tagCategories).forEach(([cat,tags])=>{
@@ -247,7 +239,7 @@ tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
 save();renderTags();renderTagManager();
 }
 
-// 追加
+/* 追加 */
 function addItem(){
 let name=document.getElementById("name").value.trim();
 if(!name)return;
@@ -281,7 +273,24 @@ setTimeout(()=>switchTab("list"),500);
 });
 }
 
-// ログ
+/* 編集 */
+function editItem(id){
+let item=data.find(d=>d.id==id);
+if(!item)return;
+
+let n=prompt("名前",item.name);
+if(n===null)return;
+
+let m=prompt("メモ",item.memo||"");
+if(m===null)return;
+
+item.name=n;
+item.memo=m;
+
+save();render();
+}
+
+/* ログ */
 function addLog(id){
 let item=data.find(d=>d.id==id);
 let today=new Date().toISOString().split("T")[0];
@@ -295,7 +304,7 @@ item.logs.push({date:today});
 save();render();
 }
 
-// 削除
+/* 削除 */
 function deleteItem(id){
 let item=data.find(d=>d.id==id);
 if(!confirm(`「${item.name}」削除？`))return;
@@ -304,7 +313,7 @@ data=data.filter(d=>d.id!=id);
 save();render();toast("削除しました");
 }
 
-// 描画
+/* 描画 */
 function match(item){
 if(showFavOnly && !item.favorite)return false;
 if(selectedTags.length===0)return true;
@@ -316,6 +325,7 @@ return mode==="AND"
 
 function render(){
 list.innerHTML="";
+
 data.filter(match)
 .sort((a,b)=>(b.favorite||false)-(a.favorite||false))
 .forEach(item=>{
@@ -325,23 +335,31 @@ div.className="card";
 div.innerHTML=`
 <div style="display:flex;justify-content:space-between;">
 <b>${item.name}</b>
-<span onclick="toggleFav(${item.id})">${item.favorite?"⭐":"☆"}</span>
+<span onclick="toggleFav(${item.id});event.stopPropagation();">
+${item.favorite?"⭐":"☆"}
+</span>
 </div>
 
 ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
 
 <div>${item.memo||""}</div>
+
 <div>回数：${item.logs.length}</div>
 <div>最終：${item.logs.length?item.logs[item.logs.length-1].date:"-"}</div>
 
 <div>
-${item.images.map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`).join("")}
+${item.images.map(img=>`
+<img class="thumb" src="${img}" onclick="openGallery(${item.id});event.stopPropagation();">
+`).join("")}
 </div>
 
-<button class="big-btn" onclick="addLog(${item.id})">やった！</button>
+<button class="big-btn" onclick="addLog(${item.id});event.stopPropagation();">
+やった！
+</button>
 
-<div>
-<button onclick="deleteItem(${item.id})">削除</button>
+<div style="margin-top:6px;">
+<button onclick="editItem(${item.id});event.stopPropagation();">編集</button>
+<button onclick="deleteItem(${item.id});event.stopPropagation();">削除</button>
 </div>
 `;
 
@@ -349,7 +367,7 @@ list.appendChild(div);
 });
 }
 
-// ギャラリー（横＋下スワイプ）
+/* ギャラリー */
 let g=[],i=0,startX=0,startY=0,deltaY=0;
 
 function openGallery(id){
@@ -397,7 +415,7 @@ function next(){i=(i+1)%g.length;mainImg.src=g[i];}
 function prev(){i=(i-1+g.length)%g.length;mainImg.src=g[i];}
 function closeModal(){modal.style.display="none";}
 
-// トースト
+/* トースト */
 function toast(msg){
 let t=document.getElementById("toast");
 t.textContent=msg;
@@ -405,7 +423,7 @@ t.style.display="block";
 setTimeout(()=>t.style.display="none",1500);
 }
 
-// 初期化
+/* 初期化 */
 render();
 renderTags();
 renderTagManager();
