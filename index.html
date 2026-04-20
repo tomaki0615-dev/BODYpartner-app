@@ -104,6 +104,7 @@ button{
   max-width:600px;
   border-radius:10px;
   touch-action:none;
+  cursor:zoom-in;
 }
 
 #mainImg.zoomed{
@@ -197,7 +198,6 @@ let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || JSON.str
 
 let selectedTags = [];
 let addSelectedTags = [];
-let mode = "OR";
 
 const list = document.getElementById("list");
 const modalOverlay = document.getElementById("modalOverlay");
@@ -230,7 +230,6 @@ function switchTab(tab){
 //////////////////////
 function renderTags(){
   let html="";
-
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html+=`<div>${cat}</div>`;
     tags.forEach(tag=>{
@@ -240,7 +239,6 @@ function renderTags(){
       `;
     });
   });
-
   filterTags.innerHTML=html;
 
   let addHtml="";
@@ -253,7 +251,6 @@ function renderTags(){
       `;
     });
   });
-
   addTags.innerHTML=addHtml;
 }
 
@@ -270,6 +267,15 @@ function toggleAddTag(tag){
   addSelectedTags = addSelectedTags.includes(tag)
     ? addSelectedTags.filter(t=>t!==tag)
     : [...addSelectedTags,tag];
+}
+
+//////////////////////
+// 🧠フィルタ
+//////////////////////
+function match(item){
+  if(selectedTags.length===0) return true;
+
+  return selectedTags.some(t=>(item.tags||[]).includes(t));
 }
 
 //////////////////////
@@ -348,14 +354,24 @@ function deleteTag(cat,tag){
 }
 
 //////////////////////
-// 🧠フィルタ
+// 💪やったボタン
 //////////////////////
-function match(item){
-  if(selectedTags.length===0) return true;
+function addLog(id){
+  let item=data.find(d=>d.id===id);
+  if(!item) return;
 
-  return mode==="AND"
-    ? selectedTags.every(t=>(item.tags||[]).includes(t))
-    : selectedTags.some(t=>(item.tags||[]).includes(t));
+  let today=new Date().toISOString().split("T")[0];
+
+  if(!item.logs) item.logs=[];
+
+  if(item.logs.some(l=>l.date===today)){
+    alert("今日はすでに記録済み");
+    return;
+  }
+
+  item.logs.push({date:today});
+  save();
+  render();
 }
 
 //////////////////////
@@ -382,11 +398,8 @@ function openDetail(item){
     };
 
     img.ontouchend=e=>{
-      let ex=e.changedTouches[0].clientX;
-      let ey=e.changedTouches[0].clientY;
-
-      let dx=ex-sx;
-      let dy=ey-sy;
+      let dx=e.changedTouches[0].clientX-sx;
+      let dy=e.changedTouches[0].clientY-sy;
 
       if(Math.abs(dx)>Math.abs(dy)){
         if(dx<-50) next();
@@ -413,7 +426,7 @@ function openDetail(item){
 }
 
 //////////////////////
-// 🧾描画（編集削除復活）
+// 🧾描画
 //////////////////////
 function render(){
   list.innerHTML="";
@@ -423,6 +436,10 @@ function render(){
     div.className="card";
     div.onclick=()=>openDetail(item);
 
+    let last=item.logs?.length
+      ? item.logs[item.logs.length-1].date
+      : "-";
+
     div.innerHTML=`
       <b>${item.name}</b><br>
 
@@ -431,8 +448,14 @@ function render(){
       <div>${item.memo||""}</div>
 
       <div>回数:${item.logs?.length||0}</div>
+      <div>最終:${last}</div>
 
       <div>${item.images?.[0]?`<img src="${item.images[0]}" width="60">`:""}</div>
+
+      <button class="big-btn"
+        onclick="event.stopPropagation(); addLog(${item.id})">
+        やった！
+      </button>
 
       <button onclick="event.stopPropagation(); editItem(${item.id})">編集</button>
       <button onclick="event.stopPropagation(); deleteItem(${item.id})">削除</button>
