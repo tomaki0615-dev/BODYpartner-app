@@ -12,15 +12,9 @@
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
 header{background:#222;color:#fff;padding:10px;text-align:center;}
 
-.tab{
-  display:flex;background:#eee;border-radius:12px;padding:3px;margin:10px;
-}
-.tab button{
-  flex:1;padding:10px;border:none;background:transparent;border-radius:10px;font-weight:bold;color:#555;
-}
-.tab button.active{
-  background:#fff;color:#000;box-shadow:0 1px 3px rgba(0,0,0,0.15);
-}
+.tab{display:flex;background:#eee;border-radius:12px;padding:3px;margin:10px;}
+.tab button{flex:1;padding:10px;border:none;background:transparent;border-radius:10px;font-weight:bold;color:#555;}
+.tab button.active{background:#fff;color:#000;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
 
 .container{padding:10px;}
 .card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
@@ -34,16 +28,10 @@ button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;backg
 
 .thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;margin:2px;}
 
-.modal{
-  position:fixed;inset:0;background:rgba(0,0,0,0.92);
-  display:none;justify-content:center;align-items:center;flex-direction:column;
-}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;justify-content:center;align-items:center;flex-direction:column;}
 #mainImg{width:90vw;max-width:600px;}
 
-.toast{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  background:#222;color:#fff;padding:10px 16px;border-radius:20px;display:none;
-}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;display:none;}
 </style>
 </head>
 
@@ -52,9 +40,9 @@ button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;backg
 <header>ボディケア管理</header>
 
 <div class="tab">
-  <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
-  <button id="tabAdd" onclick="switchTab('add')">追加</button>
-  <button id="tabTag" onclick="switchTab('tag')">タグ管理</button>
+<button id="tabList" class="active" onclick="switchTab('list')">検索</button>
+<button id="tabAdd" onclick="switchTab('add')">追加</button>
+<button id="tabTag" onclick="switchTab('tag')">タグ管理</button>
 </div>
 
 <div class="container">
@@ -100,7 +88,6 @@ button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;backg
 
 <script>
 
-// ===== データ =====
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
 let tagCategories=JSON.parse(localStorage.getItem("tagCategories")||JSON.stringify({
@@ -110,45 +97,43 @@ freq:["毎日","週3","月水金"],
 body:["上半身","下半身","体幹","顔"]
 }));
 
-let selectedTags=[];
-let addSelectedTags=[];
-let mode="OR";
-let showFavOnly=false;
+let selectedTags=[],addSelectedTags=[];
+let mode="OR",showFavOnly=false;
 
-// ===== 保存 =====
+// 保存
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
 localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-// ===== 画像圧縮（コア機能🔥）=====
+// 圧縮
 function compressImage(file){
-  return new Promise(res=>{
-    let img=new Image();
-    let reader=new FileReader();
+return new Promise(res=>{
+let img=new Image();
+let reader=new FileReader();
 
-    reader.onload=e=>img.src=e.target.result;
+reader.onload=e=>img.src=e.target.result;
 
-    img.onload=()=>{
-      let canvas=document.createElement("canvas");
-      let ctx=canvas.getContext("2d");
+img.onload=()=>{
+let canvas=document.createElement("canvas");
+let ctx=canvas.getContext("2d");
 
-      let maxWidth=800;
-      let scale=img.width>maxWidth ? maxWidth/img.width : 1;
+let max=800;
+let scale=img.width>max?max/img.width:1;
 
-      canvas.width=img.width*scale;
-      canvas.height=img.height*scale;
+canvas.width=img.width*scale;
+canvas.height=img.height*scale;
 
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-      res(canvas.toDataURL("image/jpeg",0.7));
-    };
+res(canvas.toDataURL("image/jpeg",0.7));
+};
 
-    reader.readAsDataURL(file);
-  });
+reader.readAsDataURL(file);
+});
 }
 
-// ===== タブ =====
+// タブ
 function switchTab(tab){
 listTab.style.display=tab==="list"?"block":"none";
 addTab.style.display=tab==="add"?"block":"none";
@@ -163,14 +148,14 @@ renderTags();
 renderTagManager();
 }
 
-// ===== 検索 =====
+// 検索
 function toggleMode(){
 mode=mode==="OR"?"AND":"OR";
-modeText.innerText=mode;
+document.getElementById("mode").innerText=mode;
 render();
 }
 
-// ===== お気に入り =====
+// お気に入り
 function toggleFav(id){
 let item=data.find(d=>d.id==id);
 item.favorite=!item.favorite;
@@ -182,7 +167,7 @@ showFavOnly=!showFavOnly;
 render();
 }
 
-// ===== タグ =====
+// タグUI
 function renderTags(){
 let html="";
 Object.entries(tagCategories).forEach(([c,tags])=>{
@@ -206,25 +191,64 @@ selectedAddTags.innerHTML=addSelectedTags.map(t=>`<span class="tag">${t}</span>`
 }
 
 function toggleTag(tag){
-selectedTags=selectedTags.includes(tag)
-?selectedTags.filter(t=>t!==tag)
-:[...selectedTags,tag];
-
-render();
-renderTags();
+selectedTags=selectedTags.includes(tag)?selectedTags.filter(t=>t!==tag):[...selectedTags,tag];
+render();renderTags();
 }
-
 function toggleAddTag(tag){
-addSelectedTags=addSelectedTags.includes(tag)
-?addSelectedTags.filter(t=>t!==tag)
-:[...addSelectedTags,tag];
-
+addSelectedTags=addSelectedTags.includes(tag)?addSelectedTags.filter(t=>t!==tag):[...addSelectedTags,tag];
 renderTags();
 }
 
-// ===== 追加（圧縮適用🔥）=====
-function addItem(){
+// タグ管理
+function renderTagManager(){
+let html="";
+Object.entries(tagCategories).forEach(([cat,tags])=>{
+html+=`<h4>${cat}</h4>`;
+tags.forEach(tag=>{
+html+=`
+<div>
+${tag}
+<button onclick="editTag('${cat}','${tag}')">編集</button>
+<button onclick="deleteTag('${cat}','${tag}')">削除</button>
+</div>`;
+});
+});
+tagList.innerHTML=html;
+}
 
+function addTag(){
+let cat=newTagCat.value;
+let name=newTagName.value.trim();
+if(!name)return;
+
+if(!tagCategories[cat].includes(name)){
+tagCategories[cat].push(name);
+}
+
+save();
+newTagName.value="";
+renderTags();
+renderTagManager();
+}
+
+function editTag(cat,old){
+let n=prompt("編集",old);
+if(!n)return;
+
+let arr=tagCategories[cat];
+arr[arr.indexOf(old)]=n;
+
+save();renderTags();renderTagManager();
+}
+
+function deleteTag(cat,tag){
+if(!confirm(`「${tag}」削除？`))return;
+tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
+save();renderTags();renderTagManager();
+}
+
+// 追加
+function addItem(){
 let name=document.getElementById("name").value.trim();
 if(!name)return;
 
@@ -232,12 +256,9 @@ let memo=document.getElementById("memo").value;
 let files=imageInput.files;
 
 let ps=[];
-for(let f of files){
-ps.push(compressImage(f)); // 🔥ここが進化
-}
+for(let f of files){ps.push(compressImage(f));}
 
 Promise.all(ps).then(imgs=>{
-
 data.push({
 id:Date.now(),
 name,
@@ -249,7 +270,6 @@ favorite:false
 });
 
 save();
-
 toast("追加しました");
 
 document.getElementById("name").value="";
@@ -258,11 +278,10 @@ imageInput.value="";
 addSelectedTags=[];
 
 setTimeout(()=>switchTab("list"),500);
-
 });
 }
 
-// ===== ログ =====
+// ログ
 function addLog(id){
 let item=data.find(d=>d.id==id);
 let today=new Date().toISOString().split("T")[0];
@@ -273,25 +292,22 @@ return;
 }
 
 item.logs.push({date:today});
-save();
-render();
+save();render();
 }
 
-// ===== 削除 =====
+// 削除
 function deleteItem(id){
 let item=data.find(d=>d.id==id);
 if(!confirm(`「${item.name}」削除？`))return;
 
 data=data.filter(d=>d.id!=id);
-save();
-render();
-toast("削除しました");
+save();render();toast("削除しました");
 }
 
-// ===== 描画 =====
+// 描画
 function match(item){
-if(showFavOnly && !item.favorite) return false;
-if(selectedTags.length===0) return true;
+if(showFavOnly && !item.favorite)return false;
+if(selectedTags.length===0)return true;
 
 return mode==="AND"
 ?selectedTags.every(t=>item.tags.includes(t))
@@ -299,13 +315,10 @@ return mode==="AND"
 }
 
 function render(){
-
 list.innerHTML="";
-
 data.filter(match)
 .sort((a,b)=>(b.favorite||false)-(a.favorite||false))
 .forEach(item=>{
-
 let div=document.createElement("div");
 div.className="card";
 
@@ -318,7 +331,6 @@ div.innerHTML=`
 ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
 
 <div>${item.memo||""}</div>
-
 <div>回数：${item.logs.length}</div>
 <div>最終：${item.logs.length?item.logs[item.logs.length-1].date:"-"}</div>
 
@@ -337,8 +349,8 @@ list.appendChild(div);
 });
 }
 
-// ===== ギャラリー（スワイプ）=====
-let g=[],i=0,startX=0;
+// ギャラリー（横＋下スワイプ）
+let g=[],i=0,startX=0,startY=0,deltaY=0;
 
 function openGallery(id){
 let item=data.find(d=>d.id==id);
@@ -347,12 +359,37 @@ i=0;
 
 modal.style.display="flex";
 mainImg.src=g[i];
+mainImg.style.transform="translateY(0)";
+mainImg.style.transition="none";
 
-mainImg.ontouchstart=e=>startX=e.touches[0].clientX;
+mainImg.ontouchstart=e=>{
+startX=e.touches[0].clientX;
+startY=e.touches[0].clientY;
+};
+
+mainImg.ontouchmove=e=>{
+let y=e.touches[0].clientY;
+deltaY=y-startY;
+if(deltaY>0){
+mainImg.style.transform=`translateY(${deltaY}px)`;
+}
+};
+
 mainImg.ontouchend=e=>{
 let endX=e.changedTouches[0].clientX;
-if(startX-endX>50) next();
-if(endX-startX>50) prev();
+let diffX=startX-endX;
+
+if(Math.abs(diffX)>50 && Math.abs(deltaY)<50){
+if(diffX>0) next(); else prev();
+}
+
+if(deltaY>120){
+closeModal();
+return;
+}
+
+mainImg.style.transition="0.2s";
+mainImg.style.transform="translateY(0)";
 };
 }
 
@@ -360,7 +397,7 @@ function next(){i=(i+1)%g.length;mainImg.src=g[i];}
 function prev(){i=(i-1+g.length)%g.length;mainImg.src=g[i];}
 function closeModal(){modal.style.display="none";}
 
-// ===== トースト =====
+// トースト
 function toast(msg){
 let t=document.getElementById("toast");
 t.textContent=msg;
@@ -368,9 +405,10 @@ t.style.display="block";
 setTimeout(()=>t.style.display="none",1500);
 }
 
-// 初期
+// 初期化
 render();
 renderTags();
+renderTagManager();
 
 </script>
 
