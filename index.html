@@ -19,19 +19,36 @@ header{
   text-align:center;
 }
 
-/* タブ */
-.tab{display:flex;}
-.tab button{
-  flex:1;
-  padding:10px;
-  border:none;
+/* =========================
+   🔷 四角連結タブ（ここ変更）
+========================= */
+.tab{
+  display:flex;
+  border-bottom:1px solid #ccc;
   background:#ddd;
 }
-.tab button.active{
-  background:#222;
-  color:#fff;
+
+.tab button{
+  flex:1;
+  padding:12px 10px;
+  border:none;
+  background:#ddd;
+  color:#333;
+  font-weight:bold;
+  border-right:1px solid #bbb;
 }
 
+.tab button:last-child{
+  border-right:none;
+}
+
+.tab button.active{
+  background:#fff;
+  color:#222;
+  border-bottom:2px solid #222;
+}
+
+/* コンテンツ */
 .container{padding:10px;}
 
 .card{
@@ -61,7 +78,11 @@ header{
   background:#eee;
   cursor:pointer;
 }
-.tag-select.active{background:#222;color:#fff;}
+
+.tag-select.active{
+  background:#222;
+  color:#fff;
+}
 
 /* ボタン */
 button{
@@ -96,6 +117,7 @@ button{
   transition:.3s;
 }
 .toast.show{opacity:1;}
+
 </style>
 </head>
 
@@ -103,6 +125,7 @@ button{
 
 <header>筋トレ・ストレッチ管理</header>
 
+<!-- 🔷タブ -->
 <div class="tab">
   <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
   <button id="tabAdd" onclick="switchTab('add')">追加</button>
@@ -123,10 +146,7 @@ button{
 
   <div id="addTags"></div>
 
-  <div>
-    <b>選択中：</b>
-    <div id="selectedAddTags"></div>
-  </div>
+  <div><b>選択中：</b><div id="selectedAddTags"></div></div>
 
   <textarea id="memo" placeholder="メモ"></textarea><br><br>
   <input type="file" id="imageInput" multiple><br><br>
@@ -192,7 +212,7 @@ function save(){
 }
 
 ////////////////////////
-// タブ
+// タブ切替
 ////////////////////////
 function switchTab(tab){
 
@@ -214,7 +234,6 @@ function switchTab(tab){
 ////////////////////////
 function renderTags(){
 
-  // 検索側
   let html="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     html+=`<div>${cat}</div>`;
@@ -227,7 +246,6 @@ function renderTags(){
   });
   filterTags.innerHTML=html;
 
-  // 追加側
   let addHtml="";
   Object.entries(tagCategories).forEach(([cat,tags])=>{
     addHtml+=`<div>${cat}</div>`;
@@ -251,7 +269,7 @@ function toggleTag(tag){
     ? selectedTags.filter(t=>t!==tag)
     : [...selectedTags,tag];
 
-  render();      // ←重要
+  render();
   renderTags();
 }
 
@@ -296,7 +314,6 @@ function addItem(){
 
     save();
 
-    // クリア
     document.getElementById("name").value="";
     document.getElementById("memo").value="";
     document.getElementById("imageInput").value="";
@@ -323,7 +340,6 @@ function addTag(){
   }
 
   save();
-
   newTagName.value="";
   renderTags();
   renderTagManager();
@@ -363,7 +379,7 @@ function toast(msg){
 }
 
 ////////////////////////
-// フィルタ条件
+// フィルタ
 ////////////////////////
 function match(item){
   if(selectedTags.length===0) return true;
@@ -371,14 +387,12 @@ function match(item){
 }
 
 ////////////////////////
-// 描画（検索反映）
+// 描画
 ////////////////////////
 function render(){
   list.innerHTML="";
 
-  let filtered=data.filter(match);
-
-  filtered.forEach(item=>{
+  data.filter(match).forEach(item=>{
     let div=document.createElement("div");
     div.className="card";
 
