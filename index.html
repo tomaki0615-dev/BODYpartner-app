@@ -5,33 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>からだ整え</title>
 
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" href="icon.png">
-
 <style>
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
-header{background:#222;color:#fff;padding:10px;text-align:center;font-weight:bold;}
+header{background:#222;color:#fff;padding:10px;text-align:center;}
 
-.tab{display:flex;background:#eee;border-radius:12px;padding:3px;margin:10px;}
-.tab button{flex:1;padding:10px;border:none;background:transparent;border-radius:10px;font-weight:bold;color:#555;}
-.tab button.active{background:#fff;color:#000;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+.tab{display:flex;background:#eee;padding:4px;margin:10px;border-radius:10px;}
+.tab button{flex:1;padding:10px;border:none;background:transparent;}
+.tab button.active{background:#fff;border-radius:8px;}
 
 .container{padding:10px;}
 .card{background:#fff;margin-bottom:10px;padding:10px;border-radius:10px;}
 
 .tag{background:#666;color:#fff;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;}
-.tag-select{background:#eee;padding:4px 8px;margin:2px;border-radius:10px;font-size:12px;cursor:pointer;}
+.tag-select{background:#eee;padding:4px 8px;margin:2px;border-radius:10px;cursor:pointer;}
 .tag-select.active{background:#222;color:#fff;}
 
 .big-btn{background:#2e7d32;color:#fff;border:none;width:100%;padding:10px;border-radius:10px;}
 .big-btn.done{background:#ccc !important;color:#666 !important;pointer-events:none;}
 
-.thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;margin:2px;}
+.thumb{width:60px;height:60px;border-radius:8px;margin:2px;}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.92);display:none;justify-content:center;align-items:center;}
-#mainImg{width:90vw;max-width:600px;transition:0.2s;}
-
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;display:none;}
+.modal{position:fixed;inset:0;background:#000c;display:none;justify-content:center;align-items:center;}
+#mainImg{width:90vw;max-width:600px;}
 </style>
 </head>
 
@@ -40,15 +35,14 @@ header{background:#222;color:#fff;padding:10px;text-align:center;font-weight:bol
 <header>からだ整え管理</header>
 
 <div class="tab">
-<button id="tabList" class="active" onclick="switchTab('list')">検索</button>
-<button id="tabAdd" onclick="switchTab('add')">追加</button>
-<button id="tabTag" onclick="switchTab('tag')">タグ管理</button>
+<button onclick="switchTab('list')" id="tabList" class="active">検索</button>
+<button onclick="switchTab('add')" id="tabAdd">追加</button>
+<button onclick="switchTab('tag')" id="tabTag">タグ管理</button>
 </div>
 
 <div class="container">
 
 <div id="listTab">
-<button onclick="toggleMode()">検索：<span id="mode">OR</span></button>
 <div id="filterTags"></div>
 <div id="list"></div>
 </div>
@@ -62,7 +56,8 @@ header{background:#222;color:#fff;padding:10px;text-align:center;font-weight:bol
 </div>
 
 <div id="tagTab" style="display:none">
-<h3>タグ管理</h3>
+<input id="newTag">
+<button onclick="addTag()">追加</button>
 <div id="tagList"></div>
 </div>
 
@@ -72,23 +67,23 @@ header{background:#222;color:#fff;padding:10px;text-align:center;font-weight:bol
 <img id="mainImg">
 </div>
 
-<div id="toast" class="toast"></div>
-
 <script>
 
-/* 日本時間 */
+/* 日付 */
 function getToday(){
 let d=new Date();
 return `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}-${('0'+d.getDate()).slice(-2)}`;
 }
 
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
+let tags=JSON.parse(localStorage.getItem("tags")||"[]");
+
 let selectedTags=[],addSelectedTags=[];
-let mode="OR";
 
 /* 保存 */
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
+localStorage.setItem("tags",JSON.stringify(tags));
 }
 
 /* タブ */
@@ -101,28 +96,73 @@ tabList.classList.toggle("active",tab==="list");
 tabAdd.classList.toggle("active",tab==="add");
 tabTag.classList.toggle("active",tab==="tag");
 
+renderTags();
 render();
+renderTagManager();
 }
 
-/* 画像圧縮 */
+/* タグ */
+function renderTags(){
+filterTags.innerHTML=tags.map(t=>
+`<span class="tag-select ${selectedTags.includes(t)?"active":""}" onclick="toggleTag('${t}')">${t}</span>`
+).join("");
+
+addTags.innerHTML=tags.map(t=>
+`<span class="tag-select ${addSelectedTags.includes(t)?"active":""}" onclick="toggleAddTag('${t}')">${t}</span>`
+).join("");
+}
+
+function toggleTag(t){
+selectedTags=selectedTags.includes(t)?selectedTags.filter(x=>x!==t):[...selectedTags,t];
+render();
+renderTags();
+}
+
+function toggleAddTag(t){
+addSelectedTags=addSelectedTags.includes(t)?addSelectedTags.filter(x=>x!==t):[...addSelectedTags,t];
+renderTags();
+}
+
+/* タグ管理 */
+function addTag(){
+let t=newTag.value.trim();
+if(!t)return;
+if(!tags.includes(t)) tags.push(t);
+newTag.value="";
+save();
+renderTags();
+renderTagManager();
+}
+
+function renderTagManager(){
+tagList.innerHTML=tags.map(t=>`
+<div>${t} <button onclick="deleteTag('${t}')">削除</button></div>
+`).join("");
+}
+
+function deleteTag(t){
+tags=tags.filter(x=>x!==t);
+save();
+renderTags();
+renderTagManager();
+}
+
+/* 画像 */
 function compressImage(file){
 return new Promise(res=>{
 let img=new Image();
-let reader=new FileReader();
-
-reader.onload=e=>img.src=e.target.result;
+let r=new FileReader();
+r.onload=e=>img.src=e.target.result;
 img.onload=()=>{
-let canvas=document.createElement("canvas");
-let ctx=canvas.getContext("2d");
-
-let scale=Math.min(800/img.width,1);
-canvas.width=img.width*scale;
-canvas.height=img.height*scale;
-
-ctx.drawImage(img,0,0,canvas.width,canvas.height);
-res(canvas.toDataURL("image/jpeg",0.7));
+let c=document.createElement("canvas");
+let ctx=c.getContext("2d");
+let s=Math.min(800/img.width,1);
+c.width=img.width*s;
+c.height=img.height*s;
+ctx.drawImage(img,0,0,c.width,c.height);
+res(c.toDataURL("image/jpeg",0.7));
 };
-reader.readAsDataURL(file);
+r.readAsDataURL(file);
 });
 }
 
@@ -133,26 +173,23 @@ if(!name)return;
 
 let files=imageInput.files;
 let ps=[];
-
 for(let f of files) ps.push(compressImage(f));
 
 Promise.all(ps).then(imgs=>{
 data.push({
 id:Date.now(),
 name,
+tags:addSelectedTags,
 memo:memo.value,
 images:imgs,
 logs:[]
 });
-
 save();
-toast("追加しました");
-
 nameInput.value="";
 memo.value="";
 imageInput.value="";
-
-setTimeout(()=>switchTab("list"),500);
+addSelectedTags=[];
+switchTab("list");
 });
 }
 
@@ -160,9 +197,7 @@ setTimeout(()=>switchTab("list"),500);
 function addLog(id){
 let item=data.find(d=>d.id==id);
 let today=getToday();
-
 if(item.logs.some(l=>l.date===today)) return;
-
 item.logs.push({date:today});
 save();
 render();
@@ -173,54 +208,54 @@ function render(){
 list.innerHTML="";
 let today=getToday();
 
-data.forEach(item=>{
+data.filter(item=>{
+return selectedTags.length===0 || selectedTags.every(t=>item.tags.includes(t));
+})
+.forEach(item=>{
+
 let done=item.logs.some(l=>l.date===today);
 
-let div=document.createElement("div");
-div.className="card";
-
-div.innerHTML=`
+list.innerHTML+=`
+<div class="card">
 <b>${item.name}</b>
+<div>${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}</div>
 <div>${item.memo||""}</div>
-<div>回数:${item.logs.length}</div>
 
 <div>
-${item.images.map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id});event.stopPropagation();">`).join("")}
+${item.images.map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`).join("")}
 </div>
 
 <button class="big-btn ${done?'done':''}" ${done?'disabled':''}
 onclick="addLog(${item.id})">
 ${done?"済":"やった！"}
 </button>
+</div>
 `;
-
-list.appendChild(div);
 });
 }
 
 /* ギャラリー */
-let g=[],i=0,startX=0,startY=0,dy=0;
+let g=[],i=0,sx=0,sy=0,dy=0;
 
 function openGallery(id){
 let item=data.find(d=>d.id==id);
 g=item.images;
 i=0;
-
 modal.style.display="flex";
 mainImg.src=g[i];
 
 mainImg.ontouchstart=e=>{
-startX=e.touches[0].clientX;
-startY=e.touches[0].clientY;
+sx=e.touches[0].clientX;
+sy=e.touches[0].clientY;
 };
 
 mainImg.ontouchmove=e=>{
-dy=e.touches[0].clientY-startY;
+dy=e.touches[0].clientY-sy;
 if(dy>0) mainImg.style.transform=`translateY(${dy}px)`;
 };
 
 mainImg.ontouchend=e=>{
-let dx=startX-e.changedTouches[0].clientX;
+let dx=sx-e.changedTouches[0].clientX;
 
 if(Math.abs(dx)>50 && Math.abs(dy)<50){
 dx>0?next():prev();
@@ -236,14 +271,10 @@ function next(){i=(i+1)%g.length;mainImg.src=g[i];}
 function prev(){i=(i-1+g.length)%g.length;mainImg.src=g[i];}
 function closeModal(){modal.style.display="none";}
 
-/* トースト */
-function toast(msg){
-toastDiv.textContent=msg;
-toastDiv.style.display="block";
-setTimeout(()=>toastDiv.style.display="none",1500);
-}
-
+/* 初期 */
+renderTags();
 render();
+renderTagManager();
 
 </script>
 
