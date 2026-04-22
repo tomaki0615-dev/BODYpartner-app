@@ -9,7 +9,7 @@
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
 header{background:#222;color:#fff;padding:10px;text-align:center;}
 
-.tab{display:flex;background:#eee;padding:4px;margin:10px;border-radius:10px;}
+.tab{display:flex;background:#eee;margin:10px;border-radius:10px;padding:3px;}
 .tab button{flex:1;padding:10px;border:none;background:transparent;}
 .tab button.active{background:#fff;border-radius:8px;}
 
@@ -63,11 +63,22 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 
 </div>
 
-<div class="modal" id="modal">
+<div class="modal" id="modal" onclick="closeModal()">
 <img id="mainImg">
 </div>
 
 <script>
+
+/* ★ ここ重要：元のキー維持 */
+let data = JSON.parse(localStorage.getItem("trainingApp") || "[]");
+let tagCategories = JSON.parse(localStorage.getItem("tagCategories") || "{}");
+
+/* fallback（壊れてても復旧） */
+if(Object.keys(tagCategories).length===0){
+tagCategories={default:["筋トレ","ストレッチ"]};
+}
+
+let selectedTags=[],addSelectedTags=[];
 
 /* 日付 */
 function getToday(){
@@ -75,15 +86,10 @@ let d=new Date();
 return `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}-${('0'+d.getDate()).slice(-2)}`;
 }
 
-let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
-let tags=JSON.parse(localStorage.getItem("tags")||"[]");
-
-let selectedTags=[],addSelectedTags=[];
-
 /* 保存 */
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
-localStorage.setItem("tags",JSON.stringify(tags));
+localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
 /* タブ */
@@ -96,13 +102,13 @@ tabList.classList.toggle("active",tab==="list");
 tabAdd.classList.toggle("active",tab==="add");
 tabTag.classList.toggle("active",tab==="tag");
 
-renderTags();
-render();
-renderTagManager();
+renderTags();render();renderTagManager();
 }
 
-/* タグ */
+/* タグ表示 */
 function renderTags(){
+let tags=Object.values(tagCategories).flat();
+
 filterTags.innerHTML=tags.map(t=>
 `<span class="tag-select ${selectedTags.includes(t)?"active":""}" onclick="toggleTag('${t}')">${t}</span>`
 ).join("");
@@ -112,12 +118,11 @@ addTags.innerHTML=tags.map(t=>
 ).join("");
 }
 
+/* タグ操作 */
 function toggleTag(t){
 selectedTags=selectedTags.includes(t)?selectedTags.filter(x=>x!==t):[...selectedTags,t];
-render();
-renderTags();
+render();renderTags();
 }
-
 function toggleAddTag(t){
 addSelectedTags=addSelectedTags.includes(t)?addSelectedTags.filter(x=>x!==t):[...addSelectedTags,t];
 renderTags();
@@ -127,27 +132,17 @@ renderTags();
 function addTag(){
 let t=newTag.value.trim();
 if(!t)return;
-if(!tags.includes(t)) tags.push(t);
+tagCategories.default.push(t);
 newTag.value="";
-save();
-renderTags();
-renderTagManager();
+save();renderTags();renderTagManager();
 }
 
 function renderTagManager(){
-tagList.innerHTML=tags.map(t=>`
-<div>${t} <button onclick="deleteTag('${t}')">削除</button></div>
-`).join("");
+let tags=Object.values(tagCategories).flat();
+tagList.innerHTML=tags.map(t=>`<div>${t}</div>`).join("");
 }
 
-function deleteTag(t){
-tags=tags.filter(x=>x!==t);
-save();
-renderTags();
-renderTagManager();
-}
-
-/* 画像 */
+/* 画像圧縮 */
 function compressImage(file){
 return new Promise(res=>{
 let img=new Image();
@@ -171,9 +166,8 @@ function addItem(){
 let name=nameInput.value.trim();
 if(!name)return;
 
-let files=imageInput.files;
 let ps=[];
-for(let f of files) ps.push(compressImage(f));
+for(let f of imageInput.files) ps.push(compressImage(f));
 
 Promise.all(ps).then(imgs=>{
 data.push({
@@ -185,10 +179,12 @@ images:imgs,
 logs:[]
 });
 save();
+
 nameInput.value="";
 memo.value="";
 imageInput.value="";
 addSelectedTags=[];
+
 switchTab("list");
 });
 }
@@ -199,8 +195,7 @@ let item=data.find(d=>d.id==id);
 let today=getToday();
 if(item.logs.some(l=>l.date===today)) return;
 item.logs.push({date:today});
-save();
-render();
+save();render();
 }
 
 /* 描画 */
@@ -212,7 +207,6 @@ data.filter(item=>{
 return selectedTags.length===0 || selectedTags.every(t=>item.tags.includes(t));
 })
 .forEach(item=>{
-
 let done=item.logs.some(l=>l.date===today);
 
 list.innerHTML+=`
@@ -222,53 +216,28 @@ list.innerHTML+=`
 <div>${item.memo||""}</div>
 
 <div>
-${item.images.map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`).join("")}
+${(item.images||[]).map(img=>`<img class="thumb" src="${img}" onclick="openGallery(${item.id})">`).join("")}
 </div>
 
 <button class="big-btn ${done?'done':''}" ${done?'disabled':''}
 onclick="addLog(${item.id})">
 ${done?"済":"やった！"}
 </button>
-</div>
-`;
+</div>`;
 });
 }
 
 /* ギャラリー */
-let g=[],i=0,sx=0,sy=0,dy=0;
+let g=[],i=0;
 
 function openGallery(id){
 let item=data.find(d=>d.id==id);
-g=item.images;
+g=item.images||[];
 i=0;
 modal.style.display="flex";
 mainImg.src=g[i];
-
-mainImg.ontouchstart=e=>{
-sx=e.touches[0].clientX;
-sy=e.touches[0].clientY;
-};
-
-mainImg.ontouchmove=e=>{
-dy=e.touches[0].clientY-sy;
-if(dy>0) mainImg.style.transform=`translateY(${dy}px)`;
-};
-
-mainImg.ontouchend=e=>{
-let dx=sx-e.changedTouches[0].clientX;
-
-if(Math.abs(dx)>50 && Math.abs(dy)<50){
-dx>0?next():prev();
 }
 
-if(dy>120) closeModal();
-
-mainImg.style.transform="";
-};
-}
-
-function next(){i=(i+1)%g.length;mainImg.src=g[i];}
-function prev(){i=(i-1+g.length)%g.length;mainImg.src=g[i];}
 function closeModal(){modal.style.display="none";}
 
 /* 初期 */
