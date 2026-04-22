@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ボディケア管理</title>
+<title>からだ整え</title>
 
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 
 <style>
 body{font-family:-apple-system;margin:0;background:#f5f5f5;}
-header{background:#222;color:#fff;padding:10px;text-align:center;}
+header{background:#222;color:#fff;padding:10px;text-align:center;font-weight:bold;}
 
 .tab{display:flex;background:#eee;border-radius:12px;padding:3px;margin:10px;}
 .tab button{flex:1;padding:10px;border:none;background:transparent;border-radius:10px;font-weight:bold;color:#555;}
@@ -24,7 +24,13 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 .tag-select.active{background:#222;color:#fff;}
 
 button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;background:#fff;}
+
 .big-btn{background:#2e7d32;color:#fff;border:none;width:100%;padding:10px;border-radius:10px;}
+.big-btn.done{
+  background:#ccc !important;
+  color:#666 !important;
+  pointer-events:none;
+}
 
 .thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;margin:2px;}
 
@@ -37,7 +43,7 @@ button{padding:5px 10px;margin:2px;border-radius:6px;border:1px solid #ccc;backg
 
 <body>
 
-<header>ボディケア管理</header>
+<header>からだ整え管理</header>
 
 <div class="tab">
 <button id="tabList" class="active" onclick="switchTab('list')">検索</button>
@@ -106,26 +112,6 @@ localStorage.setItem("trainingApp",JSON.stringify(data));
 localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-/* 画像圧縮 */
-function compressImage(file){
-return new Promise(res=>{
-let img=new Image();
-let reader=new FileReader();
-reader.onload=e=>img.src=e.target.result;
-img.onload=()=>{
-let canvas=document.createElement("canvas");
-let ctx=canvas.getContext("2d");
-let max=800;
-let scale=img.width>max?max/img.width:1;
-canvas.width=img.width*scale;
-canvas.height=img.height*scale;
-ctx.drawImage(img,0,0,canvas.width,canvas.height);
-res(canvas.toDataURL("image/jpeg",0.7));
-};
-reader.readAsDataURL(file);
-});
-}
-
 /* タブ */
 function switchTab(tab){
 listTab.style.display=tab==="list"?"block":"none";
@@ -136,9 +122,7 @@ tabList.classList.toggle("active",tab==="list");
 tabAdd.classList.toggle("active",tab==="add");
 tabTag.classList.toggle("active",tab==="tag");
 
-render();
-renderTags();
-renderTagManager();
+render();renderTags();renderTagManager();
 }
 
 /* 検索 */
@@ -159,7 +143,7 @@ showFavOnly=!showFavOnly;
 render();
 }
 
-/* タグUI */
+/* タグ */
 function renderTags(){
 let html="";
 Object.entries(tagCategories).forEach(([c,tags])=>{
@@ -245,18 +229,13 @@ let name=document.getElementById("name").value.trim();
 if(!name)return;
 
 let memo=document.getElementById("memo").value;
-let files=imageInput.files;
 
-let ps=[];
-for(let f of files){ps.push(compressImage(f));}
-
-Promise.all(ps).then(imgs=>{
 data.push({
 id:Date.now(),
 name,
 tags:addSelectedTags,
 memo,
-images:imgs,
+images:[],
 logs:[],
 favorite:false
 });
@@ -266,11 +245,9 @@ toast("追加しました");
 
 document.getElementById("name").value="";
 document.getElementById("memo").value="";
-imageInput.value="";
 addSelectedTags=[];
 
 setTimeout(()=>switchTab("list"),500);
-});
 }
 
 /* 編集 */
@@ -325,10 +302,14 @@ return mode==="AND"
 
 function render(){
 list.innerHTML="";
+let today=new Date().toISOString().split("T")[0];
 
 data.filter(match)
 .sort((a,b)=>(b.favorite||false)-(a.favorite||false))
 .forEach(item=>{
+
+let doneToday=item.logs.some(l=>l.date===today);
+
 let div=document.createElement("div");
 div.className="card";
 
@@ -347,14 +328,10 @@ ${item.tags.map(t=>`<span class="tag">${t}</span>`).join("")}
 <div>回数：${item.logs.length}</div>
 <div>最終：${item.logs.length?item.logs[item.logs.length-1].date:"-"}</div>
 
-<div>
-${item.images.map(img=>`
-<img class="thumb" src="${img}" onclick="openGallery(${item.id});event.stopPropagation();">
-`).join("")}
-</div>
-
-<button class="big-btn" onclick="addLog(${item.id});event.stopPropagation();">
-やった！
+<button class="big-btn ${doneToday?'done':''}"
+${doneToday?'disabled':''}
+onclick="addLog(${item.id});event.stopPropagation();">
+${doneToday?"済":"やった！"}
 </button>
 
 <div style="margin-top:6px;">
@@ -366,54 +343,6 @@ ${item.images.map(img=>`
 list.appendChild(div);
 });
 }
-
-/* ギャラリー */
-let g=[],i=0,startX=0,startY=0,deltaY=0;
-
-function openGallery(id){
-let item=data.find(d=>d.id==id);
-g=item.images;
-i=0;
-
-modal.style.display="flex";
-mainImg.src=g[i];
-mainImg.style.transform="translateY(0)";
-mainImg.style.transition="none";
-
-mainImg.ontouchstart=e=>{
-startX=e.touches[0].clientX;
-startY=e.touches[0].clientY;
-};
-
-mainImg.ontouchmove=e=>{
-let y=e.touches[0].clientY;
-deltaY=y-startY;
-if(deltaY>0){
-mainImg.style.transform=`translateY(${deltaY}px)`;
-}
-};
-
-mainImg.ontouchend=e=>{
-let endX=e.changedTouches[0].clientX;
-let diffX=startX-endX;
-
-if(Math.abs(diffX)>50 && Math.abs(deltaY)<50){
-if(diffX>0) next(); else prev();
-}
-
-if(deltaY>120){
-closeModal();
-return;
-}
-
-mainImg.style.transition="0.2s";
-mainImg.style.transform="translateY(0)";
-};
-}
-
-function next(){i=(i+1)%g.length;mainImg.src=g[i];}
-function prev(){i=(i-1+g.length)%g.length;mainImg.src=g[i];}
-function closeModal(){modal.style.display="none";}
 
 /* トースト */
 function toast(msg){
