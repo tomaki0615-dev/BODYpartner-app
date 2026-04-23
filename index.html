@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>からだ整え</title>
 
 <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
@@ -26,10 +27,18 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 .big-btn{background:#2e7d32;color:#fff;border:none;width:100%;padding:10px;border-radius:10px;}
 .big-btn.done{background:#ccc;color:#666;pointer-events:none;}
 
-.thumb{width:60px;height:60px;border-radius:8px;margin:2px;}
+/* ★ サムネ完全修正 */
+.thumb{
+  width:60px;
+  height:60px;
+  object-fit:cover;
+  object-position:center;
+  border-radius:8px;
+  display:inline-block;
+}
 
 .modal{position:fixed;inset:0;background:#000c;display:none;justify-content:center;align-items:center;}
-#mainImg{width:90vw;}
+#mainImg{width:90vw;max-width:600px;}
 </style>
 </head>
 
@@ -53,7 +62,7 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 </div>
 
 <div id="addTab" style="display:none">
-<input id="name" placeholder="名前"><br><br>
+<input id="nameInput" placeholder="名前"><br><br>
 <div id="addTags"></div>
 <textarea id="memo"></textarea><br><br>
 <input type="file" id="imageInput" multiple><br><br>
@@ -80,14 +89,11 @@ header{background:#222;color:#fff;padding:10px;text-align:center;}
 </div>
 
 <script>
-
-/* 日付 */
 function getToday(){
 let d=new Date();
 return `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}-${('0'+d.getDate()).slice(-2)}`;
 }
 
-/* データ */
 let data=JSON.parse(localStorage.getItem("trainingApp")||"[]");
 
 let tagCategories=JSON.parse(localStorage.getItem("tagCategories"));
@@ -104,13 +110,11 @@ let selectedTags=[],addSelectedTags=[];
 let mode="OR";
 let showFavOnly=false;
 
-/* 保存 */
 function save(){
 localStorage.setItem("trainingApp",JSON.stringify(data));
 localStorage.setItem("tagCategories",JSON.stringify(tagCategories));
 }
 
-/* タブ */
 function switchTab(tab){
 listTab.style.display=tab==="list"?"block":"none";
 addTab.style.display=tab==="add"?"block":"none";
@@ -123,7 +127,6 @@ tabTag.classList.toggle("active",tab==="tag");
 renderTags();render();renderTagManager();
 }
 
-/* タグ */
 function renderTags(){
 let html="";
 Object.entries(tagCategories).forEach(([cat,tags])=>{
@@ -148,19 +151,19 @@ function toggleTag(tag){
 selectedTags=selectedTags.includes(tag)?selectedTags.filter(t=>t!==tag):[...selectedTags,tag];
 render();renderTags();
 }
+
 function toggleAddTag(tag){
 addSelectedTags=addSelectedTags.includes(tag)?addSelectedTags.filter(t=>t!==tag):[...addSelectedTags,tag];
 renderTags();
 }
 
-/* AND OR */
 function toggleMode(){
 mode=mode==="OR"?"AND":"OR";
+mode.innerText=mode;
 document.getElementById("mode").innerText=mode;
 render();
 }
 
-/* お気に入り */
 function toggleFavorite(id){
 let item=data.find(d=>d.id==id);
 item.favorite=!item.favorite;
@@ -172,7 +175,6 @@ showFavOnly=!showFavOnly;
 render();
 }
 
-/* タグ管理 */
 function renderTagManager(){
 let html="";
 Object.entries(tagCategories).forEach(([cat,tags])=>{
@@ -190,7 +192,9 @@ function addTag(){
 let cat=newTagCat.value;
 let name=newTagName.value.trim();
 if(!name)return;
+if(!tagCategories[cat].includes(name)){
 tagCategories[cat].push(name);
+}
 newTagName.value="";
 save();renderTags();renderTagManager();
 }
@@ -209,7 +213,6 @@ tagCategories[cat]=tagCategories[cat].filter(t=>t!==tag);
 save();renderTags();renderTagManager();
 }
 
-/* 画像圧縮 */
 function compressImage(file){
 return new Promise(res=>{
 let img=new Image();
@@ -228,7 +231,6 @@ r.readAsDataURL(file);
 });
 }
 
-/* 追加 */
 function addItem(){
 let name=nameInput.value.trim();
 if(!name)return;
@@ -248,17 +250,17 @@ favorite:false
 });
 save();
 
+alert("追加しました");
+
 nameInput.value="";
 memo.value="";
 imageInput.value="";
 addSelectedTags=[];
 
-alert("追加しました");
 switchTab("list");
 });
 }
 
-/* ログ */
 function addLog(id){
 let item=data.find(d=>d.id==id);
 let today=getToday();
@@ -267,14 +269,12 @@ item.logs.push({date:today});
 save();render();
 }
 
-/* 描画 */
 function render(){
 list.innerHTML="";
 let today=getToday();
 
 data.filter(item=>{
 if(showFavOnly && !item.favorite) return false;
-
 if(selectedTags.length===0) return true;
 
 return mode==="AND"
@@ -307,8 +307,30 @@ onclick="addLog(${item.id})">
 ${done?"済":"やった！"}
 </button>
 
+<div>
+<button onclick="editItem(${item.id})">編集</button>
+<button onclick="deleteItem(${item.id})">削除</button>
+</div>
+
 </div>`;
 });
+}
+
+function editItem(id){
+let item=data.find(d=>d.id==id);
+let n=prompt("名前",item.name);
+if(n===null)return;
+let m=prompt("メモ",item.memo||"");
+if(m===null)return;
+item.name=n;
+item.memo=m;
+save();render();
+}
+
+function deleteItem(id){
+if(!confirm("削除する？"))return;
+data=data.filter(d=>d.id!==id);
+save();render();
 }
 
 /* ギャラリー */
@@ -318,6 +340,7 @@ function openGallery(id){
 let item=data.find(d=>d.id==id);
 g=item.images||[];
 i=0;
+
 modal.style.display="flex";
 mainImg.src=g[i];
 
